@@ -75,5 +75,6 @@ Inspect git status and summarize the changed files for a beginner. Suggest a sho
 当 Copilot 的回答太复杂时，直接贴：
 
 ```text
-Explain this again for someone with zero programming experience. Use one small example, define every technical term, and tell me what I should type or click next.
+Explain this again for someone with zero programming experience. Use one small example, define every technical term
+, and tell me what I should type or click next.
 ```

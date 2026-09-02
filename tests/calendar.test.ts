@@ -87,6 +87,60 @@ END:VCALENDAR`;
   assert.equal(groups[2].tasks.some((event) => event.course === "ECON 1201"), true);
 });
 
+test("hides timed events earlier today but keeps all-day events for today", () => {
+  const now = new Date(2026, 8, 1, 9, 0, 0);
+  const events = [
+    {
+      id: "timed-earlier-today",
+      title: "Already happened today",
+      course: "MATH 2110Q",
+      start: new Date(2026, 8, 1, 7, 30).toISOString(),
+      dateKey: null,
+      end: null,
+      allDay: false,
+      location: null,
+    },
+    {
+      id: "all-day-today",
+      title: "All-day reminder",
+      course: "BIO 1000",
+      start: new Date(2026, 8, 1, 0, 0).toISOString(),
+      dateKey: "2026-09-01",
+      end: null,
+      allDay: true,
+      location: null,
+    },
+  ];
+
+  const groups = groupTasks(events, now);
+
+  assert.deepEqual(
+    groups.map((group) => group.tasks.map((event) => event.id)),
+    [["all-day-today"], [], []],
+  );
+  assert.equal(groups[0].tasks.some((event) => event.id === "timed-earlier-today"), false);
+  assert.equal(groups[0].tasks.some((event) => event.id === "all-day-today"), true);
+});
+
+test("parses bracketed course names from event titles", async () => {
+  const now = new Date(2026, 8, 1, 9, 0, 0);
+  const calendar = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:chem
+DTSTAMP:20260801T120000Z
+DTSTART:${icsDate(addDays(now, 0, 14))}
+SUMMARY:[CHEM 1127Q] Lab report
+END:VEVENT
+END:VCALENDAR`;
+
+  const parsed = await parseCalendar(calendar, now);
+  const task = parsed.events[0];
+
+  assert.equal(task.course, "CHEM 1127Q");
+  assert.equal(task.title, "Lab report");
+});
+
 test("rejects non-HTTPS and private-network calendar targets", async () => {
   await assert.rejects(
     () => fetchCalendarText("http://example.com/calendar.ics"),
