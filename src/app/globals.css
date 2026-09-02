@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  --canvas: #f3f6fa;
+  --ink: #10263d;
+  --muted: #637487;
+  --navy: #0b2745;
+  --blue: #2468c6;
+  --line: #e0e7ef;
+  --line-strong: #cad5e1;
+}
+
+@theme inline {
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink);
+  --font-sans: "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-mono: "Cascadia Code", Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--canvas);
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.font-display {
+  font-family: "Segoe UI Variable Display", "Segoe UI", Arial, Helvetica, sans-serif;
+}
+
+.eyebrow {
+  color: #56718c;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  color: #617387;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.nav-item:hover {
+  background: #f1f5fa;
+  color: var(--navy);
+}
+
+.nav-item-active {
+  background: #e8f1ff;
+  color: #1e5ca8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

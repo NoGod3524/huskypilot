@@ -1,0 +1,393 @@
+"use client";
+
+import {
+  BookOpen,
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Clock3,
+  LayoutDashboard,
+  Link2,
+  LoaderCircle,
+  MapPin,
+  RefreshCw,
+  Settings,
+  Sparkles,
+  TriangleAlert,
+} from "lucide-react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+
+import type {
+  CalendarImportResult,
+  CalendarTask,
+  TaskGroup,
+} from "@/lib/calendar-types";
+import {
+  createDemoTasks,
+  formatTaskTime,
+  groupTasks,
+  isDueSoon,
+} from "@/lib/calendar-view";
+
+const courseStyles = [
+  "bg-[#dbe8ff] text-[#1851a5]",
+  "bg-[#e0f0e8] text-[#23724b]",
+  "bg-[#f2e4fa] text-[#7c3e9d]",
+  "bg-[#fff0d9] text-[#9b5a05]",
+  "bg-[#ffe4e1] text-[#a34235]",
+];
+
+function styleForCourse(course: string) {
+  const hash = Array.from(course).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  );
+  return courseStyles[hash % courseStyles.length];
+}
+
+function TaskCard({
+  task,
+  group,
+  now,
+}: {
+  task: CalendarTask;
+  group: TaskGroup["key"];
+  now: Date;
+}) {
+  const course = task.course ?? "CALENDAR";
+
+  return (
+    <article className="group rounded-2xl border border-[var(--line)] bg-[#fcfdff] p-4 transition hover:-translate-y-0.5 hover:border-[#bfd3f0] hover:shadow-[0_8px_22px_rgba(37,74,119,0.08)]">
+      <div className="flex items-start justify-between gap-3">
+        <span
+          className={`max-w-[70%] truncate rounded-md px-2 py-1 text-[10px] font-bold tracking-[0.06em] ${styleForCourse(course)}`}
+          title={course}
+        >
+          {course}
+        </span>
+        {isDueSoon(task, now) && (
+          <span className="shrink-0 rounded-full bg-[#fff0ed] px-2 py-1 text-[10px] font-bold text-[#c5402d]">
+            DUE SOON
+          </span>
+        )}
+      </div>
+      <h4 className="mt-3 min-h-10 break-words text-sm font-semibold leading-5 text-[#172b41]">
+        {task.title}
+      </h4>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-[var(--muted)]">
+        <span className="flex items-center gap-1.5">
+          <Clock3 size={13} />
+          {formatTaskTime(task, group)}
+        </span>
+        {task.location && (
+          <span className="flex max-w-full items-center gap-1.5 truncate" title={task.location}>
+            <MapPin size={13} className="shrink-0" />
+            <span className="truncate">{task.location}</span>
+          </span>
+        )}
+      </div>
+    </article>
+  );
+}
+
+export function Dashboard({ initialNow }: { initialNow: string }) {
+  const [now, setNow] = useState(() => new Date(initialNow));
+  const [calendarUrl, setCalendarUrl] = useState("");
+  const [tasks, setTasks] = useState(() => createDemoTasks(now));
+  const [calendarName, setCalendarName] = useState<string | null>(null);
+  const [isImported, setIsImported] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const currentTime = new Date();
+      setNow(currentTime);
+      setTasks(createDemoTasks(currentTime));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const groups = useMemo(() => groupTasks(tasks, now), [tasks, now]);
+  const visibleCount = groups.reduce(
+    (total, group) => total + group.tasks.length,
+    0,
+  );
+
+  const formattedToday = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(now);
+
+  async function handleImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setNotice(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/calendar/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: calendarUrl }),
+      });
+      const result = (await response.json()) as CalendarImportResult & {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "The calendar could not be imported.");
+      }
+
+      setTasks(result.events);
+      setCalendarName(result.calendarName);
+      setIsImported(true);
+      setCalendarUrl("");
+      setNotice(
+        `Imported ${result.events.length} future ${result.events.length === 1 ? "event" : "events"}.`,
+      );
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "The calendar could not be imported.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function restoreDemo() {
+    setTasks(createDemoTasks(now));
+    setCalendarName(null);
+    setIsImported(false);
+    setNotice("Demo data restored.");
+    setError(null);
+  }
+
+  return (
+    <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
+      <div className="mx-auto flex min-h-screen max-w-[1600px]">
+        <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--line)] bg-white px-5 py-7 lg:flex">
+          <div className="flex items-center gap-3 px-2">
+            <div className="grid size-10 place-items-center rounded-xl bg-[var(--navy)] text-white shadow-[0_8px_24px_rgba(8,31,58,0.18)]">
+              <Sparkles size={19} strokeWidth={2.2} />
+            </div>
+            <div>
+              <p className="font-display text-lg font-semibold tracking-[-0.02em]">HuskyPilot</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Student command center
+              </p>
+            </div>
+          </div>
+
+          <nav className="mt-12 space-y-2" aria-label="Main navigation">
+            <a className="nav-item nav-item-active" href="#dashboard">
+              <LayoutDashboard size={18} />Dashboard
+            </a>
+            <a className="nav-item" href="#tasks">
+              <Check size={18} />Tasks
+            </a>
+            <a className="nav-item" href="#connect">
+              <CalendarDays size={18} />Calendar
+            </a>
+            <a className="nav-item" href="#tasks">
+              <BookOpen size={18} />Courses
+            </a>
+          </nav>
+
+          <div className="mt-auto rounded-2xl bg-[var(--navy)] p-4 text-white">
+            <p className="text-sm font-semibold">
+              {isImported ? calendarName ?? "Calendar connected" : "Demo calendar"}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-blue-100/75">
+              {isImported
+                ? "Your events live only in this browser tab and are not saved."
+                : "Connect your own ICS link whenever you are ready."}
+            </p>
+            <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#9ec5ff]">
+              <span className="size-2 rounded-full bg-[#68d59b]" />
+              {isImported ? "Imported successfully" : "Ready to sync"}
+            </div>
+          </div>
+
+          <a className="nav-item mt-4" href="#privacy">
+            <Settings size={18} />Privacy
+          </a>
+        </aside>
+
+        <section
+          className="min-w-0 flex-1 px-4 py-5 sm:px-7 lg:px-10 lg:py-8"
+          id="dashboard"
+        >
+          <header className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 lg:hidden">
+              <div className="grid size-10 place-items-center rounded-xl bg-[var(--navy)] text-white">
+                <Sparkles size={18} />
+              </div>
+              <span className="font-display text-lg font-semibold">HuskyPilot</span>
+            </div>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="hidden text-right sm:block">
+                <p className="text-sm font-semibold">Husky Student</p>
+                <p className="text-xs text-[var(--muted)]">Your private dashboard</p>
+              </div>
+              <div className="grid size-10 place-items-center rounded-full bg-[#dbe8ff] text-sm font-bold text-[#1851a5]">
+                HS
+              </div>
+            </div>
+          </header>
+
+          <div className="mt-8 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+            <div>
+              <p className="eyebrow" suppressHydrationWarning>{formattedToday}</p>
+              <h1 className="font-display mt-2 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
+                Your week, cleared for takeoff.
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
+                Connect HuskyCT once. We&apos;ll turn your calendar into one calm,
+                ordered list of what is due next.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 self-start rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] shadow-sm xl:self-auto">
+              <Clock3 size={15} className="text-[#2a71d8]" />
+              {visibleCount} due in the next 7 days
+            </div>
+          </div>
+
+          <section
+            className="mt-7 overflow-hidden rounded-[24px] border border-[#cdddf4] bg-white shadow-[0_16px_50px_rgba(29,69,116,0.08)]"
+            aria-labelledby="connect-title"
+            id="connect"
+          >
+            <div className="grid gap-6 p-5 sm:p-7 xl:grid-cols-[1fr_1.35fr] xl:items-center">
+              <div className="flex gap-4">
+                <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#e7f0ff] text-[#2368c8]">
+                  <Link2 size={20} />
+                </div>
+                <div>
+                  <h2 id="connect-title" className="font-display text-lg font-semibold">
+                    Connect your HuskyCT calendar
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                    Paste the private ICS calendar link from Blackboard. Your NetID
+                    and password are never requested.
+                  </p>
+                </div>
+              </div>
+              <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleImport}>
+                <label className="sr-only" htmlFor="calendar-url">
+                  HuskyCT ICS calendar URL
+                </label>
+                <input
+                  id="calendar-url"
+                  name="calendarUrl"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="off"
+                  required
+                  value={calendarUrl}
+                  onChange={(event) => setCalendarUrl(event.target.value)}
+                  placeholder="https://.../calendar.ics"
+                  className="h-12 min-w-0 flex-1 rounded-xl border border-[var(--line-strong)] bg-[#fbfcfe] px-4 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(35,104,200,0.24)] transition hover:bg-[#1857aa] focus:outline-none focus:ring-4 focus:ring-[#2a71d8]/20 disabled:cursor-wait disabled:opacity-70"
+                >
+                  {isLoading ? (
+                    <><LoaderCircle size={17} className="animate-spin" />Importing…</>
+                  ) : (
+                    <>Import calendar<ChevronRight size={17} /></>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {(error || notice) && (
+              <div
+                className={`flex items-start gap-2 border-t px-5 py-3 text-sm sm:px-7 ${error ? "border-[#f3cec8] bg-[#fff6f4] text-[#9f3527]" : "border-[#cce5d7] bg-[#f3fbf7] text-[#276944]"}`}
+                role={error ? "alert" : "status"}
+                aria-live="polite"
+              >
+                {error ? <TriangleAlert size={17} className="mt-0.5 shrink-0" /> : <Check size={17} className="mt-0.5 shrink-0" />}
+                <span>{error ?? notice}</span>
+              </div>
+            )}
+
+            <div
+              className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[var(--line)] bg-[#f8fbff] px-5 py-3 text-xs text-[var(--muted)] sm:px-7"
+              id="privacy"
+            >
+              <span className="font-semibold text-[#31506f]">Private by design</span>
+              <span>No passwords</span>
+              <span>No NetID access</span>
+              <span>No data stored</span>
+            </div>
+          </section>
+
+          <div className="mt-8 flex items-end justify-between gap-4" id="tasks">
+            <div>
+              <p className="eyebrow">Deadline radar</p>
+              <h2 className="font-display mt-1 text-2xl font-semibold tracking-[-0.025em]">
+                What&apos;s ahead
+              </h2>
+            </div>
+            {isImported ? (
+              <button
+                type="button"
+                onClick={restoreDemo}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#cdd9e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
+              >
+                <RefreshCw size={13} />Use demo
+              </button>
+            ) : (
+              <span className="rounded-full bg-[#eaf2ff] px-3 py-1.5 text-xs font-semibold text-[#245ea9]">
+                Demo preview
+              </span>
+            )}
+          </div>
+
+          <div className="mt-4 grid gap-4 xl:grid-cols-3">
+            {groups.map((group) => (
+              <section
+                key={group.key}
+                className="rounded-[20px] border border-[var(--line)] bg-white p-4 shadow-[0_8px_30px_rgba(31,58,92,0.05)]"
+              >
+                <div className="flex items-center justify-between px-1 pb-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className={`size-2.5 shrink-0 rounded-full ${group.accentClass}`} />
+                    <h3 className="font-display font-semibold">{group.title}</h3>
+                    <span className="truncate text-xs text-[var(--muted)]">{group.dateLabel}</span>
+                  </div>
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#f0f3f7] text-xs font-bold text-[#536476]">
+                    {group.tasks.length}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {group.tasks.map((task) => (
+                    <TaskCard key={task.id} task={task} group={group.key} now={now} />
+                  ))}
+                  {group.tasks.length === 0 && (
+                    <div className="grid min-h-[132px] place-items-center rounded-2xl border border-dashed border-[#d7e1ec] bg-[#fafcff] p-5 text-center">
+                      <div>
+                        <Check size={18} className="mx-auto text-[#5ba97d]" />
+                        <p className="mt-2 text-xs text-[var(--muted)]">
+                          Nothing due here. Nice.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
