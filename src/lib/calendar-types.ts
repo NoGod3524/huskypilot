@@ -17,7 +17,7 @@ export type CalendarImportResult = {
 
 export type TaskGroup = {
   key: "today" | "tomorrow" | "week";
-  title: "Today" | "Tomorrow" | "This Week";
+  title: string;
   dateLabel: string;
   accentClass: string;
   tasks: CalendarTask[];

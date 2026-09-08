@@ -39,6 +39,14 @@ import {
   groupTasks,
   isDueSoon,
 } from "@/lib/calendar-view";
+import {
+  DEFAULT_LOCALE,
+  intlLocale,
+  restoreLocale,
+  saveLocale,
+  t,
+  type Locale,
+} from "@/lib/i18n";
 
 const courseStyles = [
   "bg-[#dbe8ff] text-[#1851a5]",
@@ -62,12 +70,14 @@ function TaskCard({
   now,
   completed,
   onToggleComplete,
+  locale,
 }: {
   task: CalendarTask;
   group: TaskGroup["key"];
   now: Date;
   completed: boolean;
   onToggleComplete: (taskId: string) => void;
+  locale: Locale;
 }) {
   const course = task.course ?? "CALENDAR";
   const checkboxId = `task-complete-${task.id}`;
@@ -80,7 +90,9 @@ function TaskCard({
           type="checkbox"
           checked={completed}
           onChange={() => onToggleComplete(task.id)}
-          aria-label={`Mark "${task.title}" as ${completed ? "not complete" : "complete"}`}
+          aria-label={t(locale, completed ? "task.markIncomplete" : "task.markComplete", {
+            title: task.title,
+          })}
           className="mt-1 size-4 shrink-0 cursor-pointer accent-[#2a71d8]"
         />
         <div className="min-w-0 flex-1">
@@ -93,7 +105,7 @@ function TaskCard({
             </span>
             {isDueSoon(task, now) && (
               <span className="shrink-0 rounded-full bg-[#fff0ed] px-2 py-1 text-[10px] font-bold text-[#c5402d]">
-                DUE SOON
+                {t(locale, "badge.dueSoon")}
               </span>
             )}
           </div>
@@ -105,7 +117,7 @@ function TaskCard({
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-[var(--muted)]">
             <span className="flex items-center gap-1.5">
               <Clock3 size={13} />
-              {formatTaskTime(task, group)}
+              {formatTaskTime(task, group, locale)}
             </span>
             {task.location && (
               <span className="flex max-w-full items-center gap-1.5 truncate" title={task.location}>
@@ -122,6 +134,7 @@ function TaskCard({
 
 export function Dashboard({ initialNow }: { initialNow: string }) {
   const [now, setNow] = useState(() => new Date(initialNow));
+  const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE);
   const [calendarUrl, setCalendarUrl] = useState("");
   const [tasks, setTasks] = useState(() => createDemoTasks(now));
   const [calendarName, setCalendarName] = useState<string | null>(null);
@@ -135,9 +148,20 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
+  function changeLocale(nextLocale: Locale) {
+    setLocale(nextLocale);
+    saveLocale(window.localStorage, nextLocale);
+  }
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       const currentTime = new Date();
       setNow(currentTime);
+      const restoredLocale = restoreLocale(window.localStorage);
+      setLocale(restoredLocale);
 
       const restored = restoreImportedCalendar(window.localStorage);
       if (restored.calendar) {
@@ -147,11 +171,11 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
         setIsImported(true);
         setHasSavedImport(true);
         setRestoredFromStorage(true);
-        setNotice("Restored your saved imported events.");
+        setNotice(t(restoredLocale, "notices.restoredImported"));
         setCompletedIds(restoreCompletedTaskIds(window.localStorage, "imported"));
       } else {
         if (restored.recoveredFromCorruptData) {
-          setNotice("Saved calendar data was invalid and has been cleared.");
+          setNotice(t(restoredLocale, "notices.corruptDataCleared"));
         }
         setCompletedIds(restoreCompletedTaskIds(window.localStorage, "demo"));
       }
@@ -175,24 +199,24 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     });
   }
 
-  const groups = useMemo(() => groupTasks(tasks, now), [tasks, now]);
+  const groups = useMemo(() => groupTasks(tasks, now, locale), [tasks, now, locale]);
   const visibleCount = groups.reduce(
     (total, group) => total + group.tasks.length,
     0,
   );
 
-  const formattedToday = new Intl.DateTimeFormat("en-US", {
+  const formattedToday = new Intl.DateTimeFormat(intlLocale(locale), {
     weekday: "long",
     month: "long",
     day: "numeric",
   }).format(now);
   const formattedImportedAt = useMemo(() => {
     if (!importedAt) return null;
-    return new Intl.DateTimeFormat("en-US", {
+    return new Intl.DateTimeFormat(intlLocale(locale), {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(new Date(importedAt));
-  }, [importedAt]);
+  }, [importedAt, locale]);
 
   async function handleImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -211,7 +235,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
       };
 
       if (!response.ok) {
-        throw new Error(result.error ?? "The calendar could not be imported.");
+        throw new Error(result.error ?? t(locale, "errors.importFailed"));
       }
 
       setTasks(result.events);
@@ -228,13 +252,17 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
       );
       setCalendarUrl("");
       setNotice(
-        `Imported ${result.events.length} future ${result.events.length === 1 ? "event" : "events"}.`,
+        t(
+          locale,
+          result.events.length === 1 ? "notices.importedEvent" : "notices.importedEvents",
+          { count: result.events.length },
+        ),
       );
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "The calendar could not be imported.",
+          : t(locale, "errors.importFailed"),
       );
     } finally {
       setIsLoading(false);
@@ -248,8 +276,8 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     setCompletedIds(restoreCompletedTaskIds(window.localStorage, "demo"));
     setNotice(
       hasSavedImport
-        ? "Demo data restored. Saved imported data is still available."
-        : "Demo data restored.",
+        ? t(locale, "notices.demoRestoredWithSaved")
+        : t(locale, "notices.demoRestored"),
     );
     setError(null);
   }
@@ -266,7 +294,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
       setIsImported(false);
       setCompletedIds(restoreCompletedTaskIds(window.localStorage, "demo"));
     }
-    setNotice("Saved imported calendar data has been cleared.");
+    setNotice(t(locale, "notices.savedDataCleared"));
     setError(null);
   }
 
@@ -275,7 +303,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     if (!restored.calendar) {
       setHasSavedImport(false);
       setNotice(null);
-      setError("No saved imported data was found.");
+      setError(t(locale, "errors.noSavedImport"));
       return;
     }
 
@@ -290,7 +318,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     setCompletedIds(
       new Set([...restoredCompleted].filter((id) => eventIds.has(id))),
     );
-    setNotice("Saved imported events restored.");
+    setNotice(t(locale, "notices.savedImportRestored"));
     setError(null);
   }
 
@@ -303,59 +331,59 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
               <Sparkles size={19} strokeWidth={2.2} />
             </div>
             <div>
-              <p className="font-display text-lg font-semibold tracking-[-0.02em]">HuskyPilot</p>
+              <p className="font-display text-lg font-semibold tracking-[-0.02em]">{t(locale, "app.name")}</p>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                Student command center
+                {t(locale, "app.subtitle")}
               </p>
             </div>
           </div>
 
           <nav className="mt-12 space-y-2" aria-label="Main navigation">
             <a className="nav-item nav-item-active" href="#dashboard">
-              <LayoutDashboard size={18} />Dashboard
+              <LayoutDashboard size={18} />{t(locale, "nav.dashboard")}
             </a>
             <a className="nav-item" href="#tasks">
-              <Check size={18} />Tasks
+              <Check size={18} />{t(locale, "nav.tasks")}
             </a>
             <a className="nav-item" href="#connect">
-              <CalendarDays size={18} />Calendar
+              <CalendarDays size={18} />{t(locale, "nav.calendar")}
             </a>
             <a className="nav-item" href="#tasks">
-              <BookOpen size={18} />Courses
+              <BookOpen size={18} />{t(locale, "nav.courses")}
             </a>
           </nav>
 
           <div className="mt-auto rounded-2xl bg-[var(--navy)] p-4 text-white">
             <p className="text-sm font-semibold">
-              {hasSavedImport ? calendarName ?? "Calendar connected" : "Demo calendar"}
+              {hasSavedImport ? calendarName ?? t(locale, "sidebar.calendarConnected") : t(locale, "sidebar.demoCalendar")}
             </p>
             <p className="mt-1 text-xs leading-5 text-blue-100/75">
               {hasSavedImport
-                ? "Your imported events are saved only in this browser."
-                : "Connect your own ICS link whenever you are ready."}
+                ? t(locale, "sidebar.importedDescription")
+                : t(locale, "sidebar.connectDescription")}
             </p>
             {formattedImportedAt && (
               <p className="mt-2 text-[11px] text-blue-100/85">
-                Last imported: {formattedImportedAt}
+                {t(locale, "sidebar.lastImported", { value: formattedImportedAt })}
               </p>
             )}
             {restoredFromStorage && (
               <p className="mt-1 text-[11px] text-blue-100/85">
-                Restored from saved browser data.
+                {t(locale, "sidebar.restoredFromStorage")}
               </p>
             )}
             <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#9ec5ff]">
               <span className="size-2 rounded-full bg-[#68d59b]" />
               {isImported
-                ? "Imported successfully"
+                ? t(locale, "sidebar.statusImported")
                 : hasSavedImport
-                  ? "Saved import available"
-                  : "Ready to sync"}
+                  ? t(locale, "sidebar.statusSavedAvailable")
+                  : t(locale, "sidebar.statusReady")}
             </div>
           </div>
 
           <a className="nav-item mt-4" href="#privacy">
-            <Settings size={18} />Privacy
+            <Settings size={18} />{t(locale, "nav.privacy")}
           </a>
         </aside>
 
@@ -368,12 +396,44 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
               <div className="grid size-10 place-items-center rounded-xl bg-[var(--navy)] text-white">
                 <Sparkles size={18} />
               </div>
-              <span className="font-display text-lg font-semibold">HuskyPilot</span>
+              <span className="font-display text-lg font-semibold">{t(locale, "app.name")}</span>
             </div>
             <div className="ml-auto flex items-center gap-3">
+              <div
+                role="group"
+                aria-label={t(locale, "language.label")}
+                className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-white p-1 text-xs font-semibold"
+              >
+                <button
+                  type="button"
+                  onClick={() => changeLocale("en")}
+                  aria-pressed={locale === "en"}
+                  aria-label={t(locale, "language.switchToEnglish")}
+                  className={`rounded-full px-3 py-1.5 transition ${
+                    locale === "en"
+                      ? "bg-[var(--navy)] text-white"
+                      : "text-[var(--muted)] hover:text-[#172b41]"
+                  }`}
+                >
+                  {t(locale, "language.english")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => changeLocale("zh-CN")}
+                  aria-pressed={locale === "zh-CN"}
+                  aria-label={t(locale, "language.switchToChinese")}
+                  className={`rounded-full px-3 py-1.5 transition ${
+                    locale === "zh-CN"
+                      ? "bg-[var(--navy)] text-white"
+                      : "text-[var(--muted)] hover:text-[#172b41]"
+                  }`}
+                >
+                  {t(locale, "language.chinese")}
+                </button>
+              </div>
               <div className="hidden text-right sm:block">
-                <p className="text-sm font-semibold">Husky Student</p>
-                <p className="text-xs text-[var(--muted)]">Your private dashboard</p>
+                <p className="text-sm font-semibold">{t(locale, "header.studentName")}</p>
+                <p className="text-xs text-[var(--muted)]">{t(locale, "header.privateDashboard")}</p>
               </div>
               <div className="grid size-10 place-items-center rounded-full bg-[#dbe8ff] text-sm font-bold text-[#1851a5]">
                 HS
@@ -385,16 +445,15 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
             <div>
               <p className="eyebrow" suppressHydrationWarning>{formattedToday}</p>
               <h1 className="font-display mt-2 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
-                Your week, cleared for takeoff.
+                {t(locale, "hero.title")}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-                Connect HuskyCT once. We&apos;ll turn your calendar into one calm,
-                ordered list of what is due next.
+                {t(locale, "hero.description")}
               </p>
             </div>
             <div className="flex items-center gap-2 self-start rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] shadow-sm xl:self-auto">
               <Clock3 size={15} className="text-[#2a71d8]" />
-              {visibleCount} due in the next 7 days
+              {t(locale, "hero.dueCount", { count: visibleCount })}
             </div>
           </div>
 
@@ -410,17 +469,16 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                 </div>
                 <div>
                   <h2 id="connect-title" className="font-display text-lg font-semibold">
-                    Connect your HuskyCT calendar
+                    {t(locale, "connect.title")}
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
-                    Paste the private ICS calendar link from Blackboard. Your NetID
-                    and password are never requested.
+                    {t(locale, "connect.description")}
                   </p>
                 </div>
               </div>
               <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleImport}>
                 <label className="sr-only" htmlFor="calendar-url">
-                  HuskyCT ICS calendar URL
+                  {t(locale, "connect.inputLabel")}
                 </label>
                 <input
                   id="calendar-url"
@@ -431,7 +489,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                   required
                   value={calendarUrl}
                   onChange={(event) => setCalendarUrl(event.target.value)}
-                  placeholder="https://.../calendar.ics"
+                  placeholder={t(locale, "connect.placeholder")}
                   className="h-12 min-w-0 flex-1 rounded-xl border border-[var(--line-strong)] bg-[#fbfcfe] px-4 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
                 />
                 <button
@@ -440,9 +498,9 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(35,104,200,0.24)] transition hover:bg-[#1857aa] focus:outline-none focus:ring-4 focus:ring-[#2a71d8]/20 disabled:cursor-wait disabled:opacity-70"
                 >
                   {isLoading ? (
-                    <><LoaderCircle size={17} className="animate-spin" />Importing…</>
+                    <><LoaderCircle size={17} className="animate-spin" />{t(locale, "connect.importing")}</>
                   ) : (
-                    <>Import calendar<ChevronRight size={17} /></>
+                    <>{t(locale, "connect.importButton")}<ChevronRight size={17} /></>
                   )}
                 </button>
               </form>
@@ -463,18 +521,18 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
               className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[var(--line)] bg-[#f8fbff] px-5 py-3 text-xs text-[var(--muted)] sm:px-7"
               id="privacy"
             >
-              <span className="font-semibold text-[#31506f]">Private by design</span>
-              <span>No passwords</span>
-              <span>No NetID access</span>
-              <span>Saved only in this browser</span>
+              <span className="font-semibold text-[#31506f]">{t(locale, "privacy.label")}</span>
+              <span>{t(locale, "privacy.noPasswords")}</span>
+              <span>{t(locale, "privacy.noNetId")}</span>
+              <span>{t(locale, "privacy.savedLocally")}</span>
             </div>
           </section>
 
           <div className="mt-8 flex items-end justify-between gap-4" id="tasks">
             <div>
-              <p className="eyebrow">Deadline radar</p>
+              <p className="eyebrow">{t(locale, "deadlineRadar.eyebrow")}</p>
               <h2 className="font-display mt-1 text-2xl font-semibold tracking-[-0.025em]">
-                What&apos;s ahead
+                {t(locale, "deadlineRadar.heading")}
               </h2>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -484,7 +542,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                   onClick={restoreDemo}
                   className="inline-flex items-center gap-1.5 rounded-full border border-[#cdd9e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
                 >
-                  <RefreshCw size={13} />Use demo
+                  <RefreshCw size={13} />{t(locale, "actions.useDemo")}
                 </button>
               )}
               {hasSavedImport && !isImported && (
@@ -493,7 +551,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                   onClick={restoreSavedImport}
                   className="inline-flex items-center gap-1.5 rounded-full border border-[#cdd9e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
                 >
-                  Restore saved import
+                  {t(locale, "actions.restoreSavedImport")}
                 </button>
               )}
               {hasSavedImport && (
@@ -502,12 +560,12 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                   onClick={clearSavedData}
                   className="inline-flex items-center gap-1.5 rounded-full border border-[#cdd9e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
                 >
-                  Clear saved data
+                  {t(locale, "actions.clearSavedData")}
                 </button>
               )}
               {!hasSavedImport && (
                 <span className="rounded-full bg-[#eaf2ff] px-3 py-1.5 text-xs font-semibold text-[#245ea9]">
-                  Demo preview
+                  {t(locale, "actions.demoPreview")}
                 </span>
               )}
             </div>
@@ -538,6 +596,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                       now={now}
                       completed={completedIds.has(task.id)}
                       onToggleComplete={toggleTaskCompletion}
+                      locale={locale}
                     />
                   ))}
                   {group.tasks.length === 0 && (
@@ -545,7 +604,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                       <div>
                         <Check size={18} className="mx-auto text-[#5ba97d]" />
                         <p className="mt-2 text-xs text-[var(--muted)]">
-                          Nothing due here. Nice.
+                          {t(locale, "empty.nothingDue")}
                         </p>
                       </div>
                     </div>
