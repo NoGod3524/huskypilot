@@ -62,7 +62,8 @@ test("saveImportedCalendar stores import payload without URL data", () => {
 
   const stored = storage.getItem(IMPORT_STORAGE_KEY);
   assert.ok(stored);
-  assert.equal(stored.includes("url"), false);
+  const storedObject = JSON.parse(stored) as Record<string, unknown>;
+  assert.equal("url" in storedObject, false);
 
   const parsed = parseStoredImportPayload(stored);
   assert.ok(parsed);
