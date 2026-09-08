@@ -28,6 +28,12 @@ import {
   saveImportedCalendar,
 } from "@/lib/import-storage";
 import {
+  clearCompletedTaskIds,
+  restoreCompletedTaskIds,
+  saveCompletedTaskIds,
+  type CompletionSource,
+} from "@/lib/completion-storage";
+import {
   createDemoTasks,
   formatTaskTime,
   groupTasks,
@@ -54,42 +60,61 @@ function TaskCard({
   task,
   group,
   now,
+  completed,
+  onToggleComplete,
 }: {
   task: CalendarTask;
   group: TaskGroup["key"];
   now: Date;
+  completed: boolean;
+  onToggleComplete: (taskId: string) => void;
 }) {
   const course = task.course ?? "CALENDAR";
+  const checkboxId = `task-complete-${task.id}`;
 
   return (
     <article className="group rounded-2xl border border-[var(--line)] bg-[#fcfdff] p-4 transition hover:-translate-y-0.5 hover:border-[#bfd3f0] hover:shadow-[0_8px_22px_rgba(37,74,119,0.08)]">
-      <div className="flex items-start justify-between gap-3">
-        <span
-          className={`max-w-[70%] truncate rounded-md px-2 py-1 text-[10px] font-bold tracking-[0.06em] ${styleForCourse(course)}`}
-          title={course}
-        >
-          {course}
-        </span>
-        {isDueSoon(task, now) && (
-          <span className="shrink-0 rounded-full bg-[#fff0ed] px-2 py-1 text-[10px] font-bold text-[#c5402d]">
-            DUE SOON
-          </span>
-        )}
-      </div>
-      <h4 className="mt-3 min-h-10 break-words text-sm font-semibold leading-5 text-[#172b41]">
-        {task.title}
-      </h4>
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-[var(--muted)]">
-        <span className="flex items-center gap-1.5">
-          <Clock3 size={13} />
-          {formatTaskTime(task, group)}
-        </span>
-        {task.location && (
-          <span className="flex max-w-full items-center gap-1.5 truncate" title={task.location}>
-            <MapPin size={13} className="shrink-0" />
-            <span className="truncate">{task.location}</span>
-          </span>
-        )}
+      <div className="flex items-start gap-3">
+        <input
+          id={checkboxId}
+          type="checkbox"
+          checked={completed}
+          onChange={() => onToggleComplete(task.id)}
+          aria-label={`Mark "${task.title}" as ${completed ? "not complete" : "complete"}`}
+          className="mt-1 size-4 shrink-0 cursor-pointer accent-[#2a71d8]"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <span
+              className={`max-w-[70%] truncate rounded-md px-2 py-1 text-[10px] font-bold tracking-[0.06em] ${styleForCourse(course)}`}
+              title={course}
+            >
+              {course}
+            </span>
+            {isDueSoon(task, now) && (
+              <span className="shrink-0 rounded-full bg-[#fff0ed] px-2 py-1 text-[10px] font-bold text-[#c5402d]">
+                DUE SOON
+              </span>
+            )}
+          </div>
+          <h4
+            className={`mt-3 min-h-10 break-words text-sm font-semibold leading-5 ${completed ? "text-[var(--muted)] line-through" : "text-[#172b41]"}`}
+          >
+            <label htmlFor={checkboxId}>{task.title}</label>
+          </h4>
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-[var(--muted)]">
+            <span className="flex items-center gap-1.5">
+              <Clock3 size={13} />
+              {formatTaskTime(task, group)}
+            </span>
+            {task.location && (
+              <span className="flex max-w-full items-center gap-1.5 truncate" title={task.location}>
+                <MapPin size={13} className="shrink-0" />
+                <span className="truncate">{task.location}</span>
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </article>
   );
@@ -107,6 +132,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -122,13 +148,32 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
         setHasSavedImport(true);
         setRestoredFromStorage(true);
         setNotice("Restored your saved imported events.");
-      } else if (restored.recoveredFromCorruptData) {
-        setNotice("Saved calendar data was invalid and has been cleared.");
+        setCompletedIds(restoreCompletedTaskIds(window.localStorage, "imported"));
+      } else {
+        if (restored.recoveredFromCorruptData) {
+          setNotice("Saved calendar data was invalid and has been cleared.");
+        }
+        setCompletedIds(restoreCompletedTaskIds(window.localStorage, "demo"));
       }
     }, 0);
 
     return () => window.clearTimeout(timer);
   }, []);
+
+  const completionSource: CompletionSource = isImported ? "imported" : "demo";
+
+  function toggleTaskCompletion(taskId: string) {
+    setCompletedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      saveCompletedTaskIds(window.localStorage, completionSource, next);
+      return next;
+    });
+  }
 
   const groups = useMemo(() => groupTasks(tasks, now), [tasks, now]);
   const visibleCount = groups.reduce(
@@ -176,6 +221,11 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
       setHasSavedImport(true);
       setRestoredFromStorage(false);
       saveImportedCalendar(window.localStorage, result);
+      const restoredCompleted = restoreCompletedTaskIds(window.localStorage, "imported");
+      const eventIds = new Set(result.events.map((event) => event.id));
+      setCompletedIds(
+        new Set([...restoredCompleted].filter((id) => eventIds.has(id))),
+      );
       setCalendarUrl("");
       setNotice(
         `Imported ${result.events.length} future ${result.events.length === 1 ? "event" : "events"}.`,
@@ -195,6 +245,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     setTasks(createDemoTasks(now));
     setIsImported(false);
     setRestoredFromStorage(false);
+    setCompletedIds(restoreCompletedTaskIds(window.localStorage, "demo"));
     setNotice(
       hasSavedImport
         ? "Demo data restored. Saved imported data is still available."
@@ -205,6 +256,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
 
   function clearSavedData() {
     clearImportedCalendar(window.localStorage);
+    clearCompletedTaskIds(window.localStorage, "imported");
     setHasSavedImport(false);
     setCalendarName(null);
     setImportedAt(null);
@@ -212,6 +264,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     if (isImported) {
       setTasks(createDemoTasks(now));
       setIsImported(false);
+      setCompletedIds(restoreCompletedTaskIds(window.localStorage, "demo"));
     }
     setNotice("Saved imported calendar data has been cleared.");
     setError(null);
@@ -232,6 +285,11 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     setIsImported(true);
     setHasSavedImport(true);
     setRestoredFromStorage(true);
+    const restoredCompleted = restoreCompletedTaskIds(window.localStorage, "imported");
+    const eventIds = new Set(restored.calendar.events.map((event) => event.id));
+    setCompletedIds(
+      new Set([...restoredCompleted].filter((id) => eventIds.has(id))),
+    );
     setNotice("Saved imported events restored.");
     setError(null);
   }
@@ -473,7 +531,14 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                 </div>
                 <div className="space-y-3">
                   {group.tasks.map((task) => (
-                    <TaskCard key={task.id} task={task} group={group.key} now={now} />
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      group={group.key}
+                      now={now}
+                      completed={completedIds.has(task.id)}
+                      onToggleComplete={toggleTaskCompletion}
+                    />
                   ))}
                   {group.tasks.length === 0 && (
                     <div className="grid min-h-[132px] place-items-center rounded-2xl border border-dashed border-[#d7e1ec] bg-[#fafcff] p-5 text-center">
