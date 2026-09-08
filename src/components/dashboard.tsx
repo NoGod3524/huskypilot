@@ -509,15 +509,6 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
               </div>
             )}
 
-            <div
-              className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[var(--line)] bg-[#f8fbff] px-5 py-3 text-xs text-[var(--muted)] sm:px-7"
-              id="privacy"
-            >
-              <span className="font-semibold text-[#31506f]">{t(locale, "privacy.label")}</span>
-              <span>{t(locale, "privacy.noPasswords")}</span>
-              <span>{t(locale, "privacy.noNetId")}</span>
-              <span>{t(locale, "privacy.savedLocally")}</span>
-            </div>
           </section>
 
           <div className="mt-8 flex items-end justify-between gap-4" id="tasks">
