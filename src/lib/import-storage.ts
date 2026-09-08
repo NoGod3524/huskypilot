@@ -67,23 +67,6 @@ export function serializeImportPayload(result: CalendarImportResult): string {
   return JSON.stringify(payload);
 }
 
-export function loadImportedCalendar(storage: Storage): CalendarImportResult | null {
-  const raw = storage.getItem(IMPORT_STORAGE_KEY);
-  if (!raw) return null;
-
-  const parsed = parseStoredImportPayload(raw);
-  if (!parsed) {
-    storage.removeItem(IMPORT_STORAGE_KEY);
-    return null;
-  }
-
-  return {
-    calendarName: parsed.calendarName,
-    importedAt: parsed.importedAt,
-    events: parsed.events,
-  };
-}
-
 export function restoreImportedCalendar(storage: Storage): {
   calendar: CalendarImportResult | null;
   recoveredFromCorruptData: boolean;
