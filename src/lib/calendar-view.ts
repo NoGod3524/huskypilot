@@ -1,4 +1,5 @@
 import type { CalendarTask, TaskGroup } from "./calendar-types.ts";
+import { DEFAULT_LOCALE, intlLocale, t, type Locale } from "./i18n.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -16,8 +17,8 @@ function addDays(value: Date, days: number) {
   return copy;
 }
 
-function shortDate(value: Date) {
-  return new Intl.DateTimeFormat("en-US", {
+function shortDate(value: Date, locale: Locale) {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     month: "short",
     day: "numeric",
   }).format(value);
@@ -33,6 +34,7 @@ function taskDate(event: CalendarTask) {
 export function groupTasks(
   events: CalendarTask[],
   now: Date = new Date(),
+  locale: Locale = DEFAULT_LOCALE,
 ): TaskGroup[] {
   const today = startOfLocalDay(now);
   const tomorrow = addDays(today, 1);
@@ -55,15 +57,15 @@ export function groupTasks(
   return [
     {
       key: "today",
-      title: "Today",
-      dateLabel: shortDate(today),
+      title: t(locale, "group.today"),
+      dateLabel: shortDate(today, locale),
       accentClass: "bg-[#e6533c]",
       tasks: upcoming.filter((event) => taskDate(event) < tomorrow),
     },
     {
       key: "tomorrow",
-      title: "Tomorrow",
-      dateLabel: shortDate(tomorrow),
+      title: t(locale, "group.tomorrow"),
+      dateLabel: shortDate(tomorrow, locale),
       accentClass: "bg-[#e9a23b]",
       tasks: upcoming.filter((event) => {
         const start = taskDate(event);
@@ -72,8 +74,8 @@ export function groupTasks(
     },
     {
       key: "week",
-      title: "This Week",
-      dateLabel: `${shortDate(dayAfterTomorrow)}–${shortDate(addDays(today, 6))}`,
+      title: t(locale, "group.week"),
+      dateLabel: `${shortDate(dayAfterTomorrow, locale)}–${shortDate(addDays(today, 6), locale)}`,
       accentClass: "bg-[#2a71d8]",
       tasks: upcoming.filter((event) => {
         const start = taskDate(event);
@@ -156,17 +158,25 @@ export function createDemoTasks(now: Date = new Date()): CalendarTask[] {
   ];
 }
 
-export function formatTaskTime(task: CalendarTask, group: TaskGroup["key"]) {
-  if (task.allDay) return group === "week" ? `${new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(new Date(task.start))} · All day` : "All day";
+export function formatTaskTime(
+  task: CalendarTask,
+  group: TaskGroup["key"],
+  locale: Locale = DEFAULT_LOCALE,
+) {
+  if (task.allDay) {
+    return group === "week"
+      ? `${new Intl.DateTimeFormat(intlLocale(locale), { weekday: "short" }).format(new Date(task.start))} · ${t(locale, "time.allDay")}`
+      : t(locale, "time.allDay");
+  }
 
   const start = new Date(task.start);
-  const time = new Intl.DateTimeFormat("en-US", {
+  const time = new Intl.DateTimeFormat(intlLocale(locale), {
     hour: "numeric",
     minute: "2-digit",
   }).format(start);
 
   if (group === "week") {
-    const weekday = new Intl.DateTimeFormat("en-US", {
+    const weekday = new Intl.DateTimeFormat(intlLocale(locale), {
       weekday: "short",
     }).format(start);
     return `${weekday} · ${time}`;
