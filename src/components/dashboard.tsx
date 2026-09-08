@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BookOpen,
   CalendarDays,
   Check,
   ChevronRight,
@@ -11,7 +10,6 @@ import {
   LoaderCircle,
   MapPin,
   RefreshCw,
-  Settings,
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
@@ -348,9 +346,6 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
             <a className="nav-item" href="#connect">
               <CalendarDays size={18} />{t(locale, "nav.calendar")}
             </a>
-            <a className="nav-item" href="#tasks">
-              <BookOpen size={18} />{t(locale, "nav.courses")}
-            </a>
           </nav>
 
           <div className="mt-auto rounded-2xl bg-[var(--navy)] p-4 text-white">
@@ -382,9 +377,6 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
             </div>
           </div>
 
-          <a className="nav-item mt-4" href="#privacy">
-            <Settings size={18} />{t(locale, "nav.privacy")}
-          </a>
         </aside>
 
         <section
