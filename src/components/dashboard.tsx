@@ -23,6 +23,11 @@ import type {
   TaskGroup,
 } from "@/lib/calendar-types";
 import {
+  clearImportedCalendar,
+  restoreImportedCalendar,
+  saveImportedCalendar,
+} from "@/lib/import-storage";
+import {
   createDemoTasks,
   formatTaskTime,
   groupTasks,
@@ -95,7 +100,10 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
   const [calendarUrl, setCalendarUrl] = useState("");
   const [tasks, setTasks] = useState(() => createDemoTasks(now));
   const [calendarName, setCalendarName] = useState<string | null>(null);
+  const [importedAt, setImportedAt] = useState<string | null>(null);
   const [isImported, setIsImported] = useState(false);
+  const [hasSavedImport, setHasSavedImport] = useState(false);
+  const [restoredFromStorage, setRestoredFromStorage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +112,19 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     const timer = window.setTimeout(() => {
       const currentTime = new Date();
       setNow(currentTime);
-      setTasks(createDemoTasks(currentTime));
+
+      const restored = restoreImportedCalendar(window.localStorage);
+      if (restored.calendar) {
+        setTasks(restored.calendar.events);
+        setCalendarName(restored.calendar.calendarName);
+        setImportedAt(restored.calendar.importedAt);
+        setIsImported(true);
+        setHasSavedImport(true);
+        setRestoredFromStorage(true);
+        setNotice("Restored your saved imported events.");
+      } else if (restored.recoveredFromCorruptData) {
+        setNotice("Saved calendar data was invalid and has been cleared.");
+      }
     }, 0);
 
     return () => window.clearTimeout(timer);
@@ -121,6 +141,13 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     month: "long",
     day: "numeric",
   }).format(now);
+  const formattedImportedAt = useMemo(() => {
+    if (!importedAt) return null;
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(importedAt));
+  }, [importedAt]);
 
   async function handleImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -144,7 +171,11 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
 
       setTasks(result.events);
       setCalendarName(result.calendarName);
+      setImportedAt(result.importedAt);
       setIsImported(true);
+      setHasSavedImport(true);
+      setRestoredFromStorage(false);
+      saveImportedCalendar(window.localStorage, result);
       setCalendarUrl("");
       setNotice(
         `Imported ${result.events.length} future ${result.events.length === 1 ? "event" : "events"}.`,
@@ -162,9 +193,46 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
 
   function restoreDemo() {
     setTasks(createDemoTasks(now));
-    setCalendarName(null);
     setIsImported(false);
-    setNotice("Demo data restored.");
+    setRestoredFromStorage(false);
+    setNotice(
+      hasSavedImport
+        ? "Demo data restored. Saved imported data is still available."
+        : "Demo data restored.",
+    );
+    setError(null);
+  }
+
+  function clearSavedData() {
+    clearImportedCalendar(window.localStorage);
+    setHasSavedImport(false);
+    setCalendarName(null);
+    setImportedAt(null);
+    setRestoredFromStorage(false);
+    if (isImported) {
+      setTasks(createDemoTasks(now));
+      setIsImported(false);
+    }
+    setNotice("Saved imported calendar data has been cleared.");
+    setError(null);
+  }
+
+  function restoreSavedImport() {
+    const restored = restoreImportedCalendar(window.localStorage);
+    if (!restored.calendar) {
+      setHasSavedImport(false);
+      setNotice(null);
+      setError("No saved imported data was found.");
+      return;
+    }
+
+    setTasks(restored.calendar.events);
+    setCalendarName(restored.calendar.calendarName);
+    setImportedAt(restored.calendar.importedAt);
+    setIsImported(true);
+    setHasSavedImport(true);
+    setRestoredFromStorage(true);
+    setNotice("Saved imported events restored.");
     setError(null);
   }
 
@@ -201,16 +269,30 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
 
           <div className="mt-auto rounded-2xl bg-[var(--navy)] p-4 text-white">
             <p className="text-sm font-semibold">
-              {isImported ? calendarName ?? "Calendar connected" : "Demo calendar"}
+              {hasSavedImport ? calendarName ?? "Calendar connected" : "Demo calendar"}
             </p>
             <p className="mt-1 text-xs leading-5 text-blue-100/75">
-              {isImported
-                ? "Your events live only in this browser tab and are not saved."
+              {hasSavedImport
+                ? "Your imported events are saved only in this browser."
                 : "Connect your own ICS link whenever you are ready."}
             </p>
+            {formattedImportedAt && (
+              <p className="mt-2 text-[11px] text-blue-100/85">
+                Last imported: {formattedImportedAt}
+              </p>
+            )}
+            {restoredFromStorage && (
+              <p className="mt-1 text-[11px] text-blue-100/85">
+                Restored from saved browser data.
+              </p>
+            )}
             <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-[#9ec5ff]">
               <span className="size-2 rounded-full bg-[#68d59b]" />
-              {isImported ? "Imported successfully" : "Ready to sync"}
+              {isImported
+                ? "Imported successfully"
+                : hasSavedImport
+                  ? "Saved import available"
+                  : "Ready to sync"}
             </div>
           </div>
 
@@ -326,7 +408,7 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
               <span className="font-semibold text-[#31506f]">Private by design</span>
               <span>No passwords</span>
               <span>No NetID access</span>
-              <span>No data stored</span>
+              <span>Saved only in this browser</span>
             </div>
           </section>
 
@@ -337,19 +419,40 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                 What&apos;s ahead
               </h2>
             </div>
-            {isImported ? (
-              <button
-                type="button"
-                onClick={restoreDemo}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#cdd9e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
-              >
-                <RefreshCw size={13} />Use demo
-              </button>
-            ) : (
-              <span className="rounded-full bg-[#eaf2ff] px-3 py-1.5 text-xs font-semibold text-[#245ea9]">
-                Demo preview
-              </span>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {isImported && (
+                <button
+                  type="button"
+                  onClick={restoreDemo}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#cdd9e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
+                >
+                  <RefreshCw size={13} />Use demo
+                </button>
+              )}
+              {hasSavedImport && !isImported && (
+                <button
+                  type="button"
+                  onClick={restoreSavedImport}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#cdd9e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
+                >
+                  Restore saved import
+                </button>
+              )}
+              {hasSavedImport && (
+                <button
+                  type="button"
+                  onClick={clearSavedData}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#cdd9e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
+                >
+                  Clear saved data
+                </button>
+              )}
+              {!hasSavedImport && (
+                <span className="rounded-full bg-[#eaf2ff] px-3 py-1.5 text-xs font-semibold text-[#245ea9]">
+                  Demo preview
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="mt-4 grid gap-4 xl:grid-cols-3">
