@@ -9,7 +9,7 @@ The scheme is deliberately simple:
 - **Patch** (`0.1.x`, `0.2.x`, `1.0.x`) — a fix, a cleanup, documentation, or a small addition.
 - **Minor** (`0.2.0`, `0.3.0`, `1.1.0`) — a new capability, or a change to the architecture.
 
-## 1.0.0 — Plan
+## [1.0.0](https://github.com/NoGod3524/huskypilot/releases/tag/v1.0.0) — Plan
 
 *First stable release. HuskyPilot stops only showing what is due and starts
 saying what to work on next.*
@@ -17,7 +17,7 @@ saying what to work on next.*
 ### Added
 
 - A **Plan** route (`/plan`) that compares how much work each deadline needs with
-  the days remaining.
+  the days remaining. ([#20])
 - **Effort estimates** per task — quick (15 min), medium (45), long (90) — set
   with one click and kept in the browser.
 - **At-risk detection**: a task is flagged when the sittings it still needs
@@ -204,3 +204,5 @@ saying what to work on next.*
 [#16]: https://github.com/NoGod3524/huskypilot/pull/16
 [#17]: https://github.com/NoGod3524/huskypilot/pull/17
 [#18]: https://github.com/NoGod3524/huskypilot/pull/18
+[#19]: https://github.com/NoGod3524/huskypilot/pull/19
+[#20]: https://github.com/NoGod3524/huskypilot/pull/20
