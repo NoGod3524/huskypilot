@@ -26,7 +26,8 @@ It is deliberately small and privacy-first: no NetID, no password, no scraping, 
 - **Workload insights** — completion rate, tasks per course, and the next 7 days / 4 weeks at a glance
 - **English / 简体中文** — one-click language toggle, remembered across visits
 - **Local persistence** — re-importing the same calendar preserves your completion state
-- **Privacy by design** — your ICS URL is never stored; only parsed task fields live in your browser
+- **Optional auto-refresh** — off by default; tick **Remember this calendar** and HuskyPilot re-imports the feed whenever you open it
+- **Privacy by design** — no NetID, no password, no account. Your ICS URL is used once and discarded unless you opt in to remembering it
 
 ## Architecture
 
@@ -92,7 +93,7 @@ Failures are logged without ever writing the private calendar URL to the log.
 
 | Data | Where it lives |
 |---|---|
-| Your ICS URL | Nowhere — used once, never persisted |
+| Your ICS URL | Nowhere by default — used once, then discarded. Saved in this browser only if you tick **Remember this calendar** |
 | Parsed events | `localStorage`, in your browser only |
 | Completed task IDs | `localStorage`, in your browser only |
 | Language choice | `localStorage`, in your browser only |
@@ -157,7 +158,7 @@ npm run build
 ## Design decisions
 
 - **Fetch on the server, not in the browser.** Calendar hosts rarely send permissive CORS headers, and keeping the download in one module (`safe-fetch.ts`) makes the SSRF controls reviewable in a single place.
-- **Never store the ICS URL.** The feed URL embeds a private token. Persisting it would enable background sync, but it would break the privacy promise — so manual re-import is the deliberate trade-off.
+- **Store the ICS URL only when asked.** The feed URL embeds a private token, so by default it is used once and never written anywhere. Auto-refresh is an explicit opt-in: the URL stays in this browser only (never on the server, never in logs) and is removed by unticking the box or pressing **Clear saved data**.
 - **Version every stored payload.** Each `localStorage` entry is a versioned, structurally validated object. Malformed data is dropped (and the user is told) instead of crashing the app.
 - **Completion is keyed by event ID.** IDs are derived from the event UID plus start time, so re-importing the same calendar preserves completion. If the source calendar moves an event's start time, its ID changes and completion resets — a known limitation.
 - **A rolling 7 days, not a calendar week.** The question the app answers is "what's due next", not "what is on this week's grid".
@@ -179,7 +180,7 @@ HuskyPilot started as a personal tool. Deadlines were spread across HuskyCT, syl
 - [x] Insights view: workload by course, busiest weeks, completion rate
 - [x] Installable PWA with an offline app shell
 - [x] Due-soon reminders (while the app is open)
-- [ ] Optional, opt-in auto-refresh (would require storing the feed URL locally)
+- [x] Optional, opt-in auto-refresh (stores the feed URL locally, off by default)
 - [ ] Background push reminders (would require a push server)
 - [ ] Export tasks to CSV / JSON
 
