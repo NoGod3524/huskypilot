@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  ChartColumn,
   Check,
   ChevronRight,
   Clock3,
@@ -37,6 +38,8 @@ import {
   groupTasks,
   isDueSoon,
 } from "@/lib/calendar-view";
+import { addDays, startOfLocalDay } from "@/lib/date-utils";
+import { computeInsights } from "@/lib/insights";
 import {
   DEFAULT_LOCALE,
   intlLocale,
@@ -203,6 +206,35 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     0,
   );
 
+  const insights = useMemo(
+    () => computeInsights(tasks, completedIds, now),
+    [tasks, completedIds, now],
+  );
+  const busiestDay = Math.max(1, ...insights.nextSevenDays);
+  const busiestWeek = Math.max(1, ...insights.byWeek);
+  const busiestCourse = Math.max(
+    1,
+    ...insights.byCourse.map((row) => row.total),
+  );
+  const completionPercent = Math.round(insights.completionRate * 100);
+
+  const weekdayFormat = useMemo(
+    () => new Intl.DateTimeFormat(intlLocale(locale), { weekday: "short" }),
+    [locale],
+  );
+
+  function dayLabel(index: number) {
+    if (index === 0) return t(locale, "group.today");
+    if (index === 1) return t(locale, "group.tomorrow");
+    return weekdayFormat.format(addDays(startOfLocalDay(now), index));
+  }
+
+  function barHeight(count: number, busiest: number) {
+    if (count <= 0) return 0;
+    // Keep any non-zero bar visible even when it is far below the maximum.
+    return Math.max(8, Math.round((count / busiest) * 100));
+  }
+
   const formattedToday = new Intl.DateTimeFormat(intlLocale(locale), {
     weekday: "long",
     month: "long",
@@ -345,6 +377,9 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
             </a>
             <a className="nav-item" href="#connect">
               <CalendarDays size={18} />{t(locale, "nav.calendar")}
+            </a>
+            <a className="nav-item" href="#insights">
+              <ChartColumn size={18} />{t(locale, "insights.eyebrow")}
             </a>
           </nav>
 
@@ -596,6 +631,136 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
               </section>
             ))}
           </div>
+
+          <section className="mt-10" aria-labelledby="insights-heading" id="insights">
+            <div>
+              <p className="eyebrow">{t(locale, "insights.eyebrow")}</p>
+              <h2
+                id="insights-heading"
+                className="font-display mt-1 text-2xl font-semibold tracking-[-0.025em]"
+              >
+                {t(locale, "insights.heading")}
+              </h2>
+            </div>
+
+            {insights.total === 0 ? (
+              <p className="mt-4 rounded-2xl border border-dashed border-[#d7e1ec] bg-[#fafcff] p-5 text-sm text-[var(--muted)]">
+                {t(locale, "insights.empty")}
+              </p>
+            ) : (
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <article className="rounded-[20px] border border-[var(--line)] bg-white p-5 shadow-[0_8px_30px_rgba(31,58,92,0.05)]">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                    {t(locale, "insights.completion")}
+                  </h3>
+                  <p className="font-display mt-3 text-3xl font-semibold text-[#172b41]">
+                    {completionPercent}%
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    {t(locale, "insights.completedOf", {
+                      completed: insights.completed,
+                      total: insights.total,
+                    })}
+                  </p>
+                  <div
+                    className="mt-4 h-2 overflow-hidden rounded-full bg-[#eef2f7]"
+                    role="progressbar"
+                    aria-label={t(locale, "insights.completion")}
+                    aria-valuenow={completionPercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <div
+                      className="h-full rounded-full bg-[#2f8f5b]"
+                      style={{ width: `${completionPercent}%` }}
+                    />
+                  </div>
+                </article>
+
+                <article className="rounded-[20px] border border-[var(--line)] bg-white p-5 shadow-[0_8px_30px_rgba(31,58,92,0.05)]">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                    {t(locale, "insights.nextSevenDays")}
+                  </h3>
+                  <div className="mt-4 flex items-end gap-2">
+                    {insights.nextSevenDays.map((count, index) => (
+                      <div
+                        key={index}
+                        className="flex flex-1 flex-col items-center gap-1"
+                      >
+                        <span className="text-xs font-semibold text-[#31506f]">
+                          {count}
+                        </span>
+                        <div className="flex h-24 w-full items-end rounded-md bg-[#f0f3f7]">
+                          <div
+                            className="w-full rounded-md bg-[#2a71d8]"
+                            style={{ height: `${barHeight(count, busiestDay)}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-[var(--muted)]">
+                          {dayLabel(index)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+
+                <article className="rounded-[20px] border border-[var(--line)] bg-white p-5 shadow-[0_8px_30px_rgba(31,58,92,0.05)]">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                    {t(locale, "insights.byCourse")}
+                  </h3>
+                  <ul className="mt-4 space-y-3">
+                    {insights.byCourse.map((row) => (
+                      <li key={row.course ?? "__uncategorized"}>
+                        <div className="flex items-center justify-between gap-3 text-xs">
+                          <span className="truncate font-semibold text-[#31506f]">
+                            {row.course ?? t(locale, "insights.uncategorized")}
+                          </span>
+                          <span className="shrink-0 text-[var(--muted)]">
+                            {row.completed}/{row.total}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#eef2f7]">
+                          <div
+                            className="h-full rounded-full bg-[#2a71d8]"
+                            style={{
+                              width: `${barHeight(row.total, busiestCourse)}%`,
+                            }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+
+                <article className="rounded-[20px] border border-[var(--line)] bg-white p-5 shadow-[0_8px_30px_rgba(31,58,92,0.05)]">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                    {t(locale, "insights.byWeek")}
+                  </h3>
+                  <div className="mt-4 flex items-end gap-3">
+                    {insights.byWeek.map((count, index) => (
+                      <div
+                        key={index}
+                        className="flex flex-1 flex-col items-center gap-1"
+                      >
+                        <span className="text-xs font-semibold text-[#31506f]">
+                          {count}
+                        </span>
+                        <div className="flex h-24 w-full items-end rounded-md bg-[#f0f3f7]">
+                          <div
+                            className="w-full rounded-md bg-[#e9a23b]"
+                            style={{ height: `${barHeight(count, busiestWeek)}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-[var(--muted)]">
+                          {t(locale, "insights.week", { index: index + 1 })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              </div>
+            )}
+          </section>
         </section>
       </div>
     </main>

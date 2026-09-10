@@ -1,34 +1,14 @@
 import type { CalendarTask, TaskGroup } from "./calendar-types.ts";
+import { addDays, startOfLocalDay, taskDate } from "./date-utils.ts";
 import { DEFAULT_LOCALE, intlLocale, t, type Locale } from "./i18n.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-function startOfLocalDay(value: Date) {
-  return new Date(
-    value.getFullYear(),
-    value.getMonth(),
-    value.getDate(),
-  );
-}
-
-function addDays(value: Date, days: number) {
-  const copy = new Date(value);
-  copy.setDate(copy.getDate() + days);
-  return copy;
-}
 
 function shortDate(value: Date, locale: Locale) {
   return new Intl.DateTimeFormat(intlLocale(locale), {
     month: "short",
     day: "numeric",
   }).format(value);
-}
-
-function taskDate(event: CalendarTask) {
-  if (event.allDay && event.dateKey) {
-    return new Date(`${event.dateKey}T00:00:00`);
-  }
-  return new Date(event.start);
 }
 
 export function groupTasks(

@@ -58,6 +58,16 @@ const en = {
   "language.chinese": "简体中文",
   "language.switchToEnglish": "Switch to English",
   "language.switchToChinese": "Switch to Simplified Chinese",
+  "insights.eyebrow": "Insights",
+  "insights.heading": "Your workload at a glance",
+  "insights.empty": "Nothing to analyze yet. Import a calendar to see your workload.",
+  "insights.completion": "Completion",
+  "insights.completedOf": "{completed} of {total} done",
+  "insights.byCourse": "Tasks by course",
+  "insights.nextSevenDays": "Next 7 days",
+  "insights.byWeek": "Next 4 weeks",
+  "insights.uncategorized": "Uncategorized",
+  "insights.week": "Week {index}",
 } as const;
 
 const zhCN: Record<TranslationKey, string> = {
@@ -115,6 +125,16 @@ const zhCN: Record<TranslationKey, string> = {
   "language.chinese": "简体中文",
   "language.switchToEnglish": "切换为英文",
   "language.switchToChinese": "切换为简体中文",
+  "insights.eyebrow": "洞察",
+  "insights.heading": "你的任务负担一览",
+  "insights.empty": "暂无可分析的任务。导入日历后即可看到负担分析。",
+  "insights.completion": "完成率",
+  "insights.completedOf": "已完成 {completed} / {total}",
+  "insights.byCourse": "各课程任务量",
+  "insights.nextSevenDays": "未来 7 天",
+  "insights.byWeek": "未来 4 周",
+  "insights.uncategorized": "未分类",
+  "insights.week": "第 {index} 周",
 };
 
 export type TranslationKey = keyof typeof en;
