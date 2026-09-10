@@ -533,6 +533,22 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
               </form>
             </div>
 
+            <details className="group border-t border-[var(--line)] px-5 py-3 text-sm sm:px-7">
+              <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-[#31506f] [&::-webkit-details-marker]:hidden">
+                <ChevronRight size={15} className="shrink-0 text-[#2a71d8] transition group-open:rotate-90" />
+                {t(locale, "connect.helpTitle")}
+              </summary>
+              <ol className="mt-3 list-decimal space-y-1.5 pl-5 leading-6 text-[var(--muted)]">
+                <li>{t(locale, "connect.helpStep1")}</li>
+                <li>{t(locale, "connect.helpStep2")}</li>
+                <li>{t(locale, "connect.helpStep3")}</li>
+                <li>{t(locale, "connect.helpStep4")}</li>
+              </ol>
+              <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
+                {t(locale, "connect.helpNote")}
+              </p>
+            </details>
+
             {(error || notice) && (
               <div
                 className={`flex items-start gap-2 border-t px-5 py-3 text-sm sm:px-7 ${error ? "border-[#f3cec8] bg-[#fff6f4] text-[#9f3527]" : "border-[#cce5d7] bg-[#f3fbf7] text-[#276944]"}`}
