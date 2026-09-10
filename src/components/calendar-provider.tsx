@@ -24,6 +24,14 @@ import {
   type CompletionSource,
 } from "@/lib/completion-storage";
 import { createDemoTasks, groupTasks } from "@/lib/calendar-view";
+import {
+  restoreEffortMap,
+  saveEffortMap,
+  withEffort,
+  type EffortLevel,
+  type EffortMap,
+} from "@/lib/effort";
+import { buildPlan, type Plan } from "@/lib/plan";
 import { computeInsights, type Insights } from "@/lib/insights";
 import {
   dueSoonTasks,
@@ -60,6 +68,10 @@ type CalendarContextValue = {
   groups: TaskGroup[];
   visibleCount: number;
   dueSoon: CalendarTask[];
+
+  efforts: EffortMap;
+  setTaskEffort: (taskId: string, level: EffortLevel) => void;
+  plan: Plan;
 
   insights: Insights;
   completionPercent: number;
@@ -130,6 +142,8 @@ export function CalendarProvider({
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
+  // Task id -> how much work the user says it is. Defaults to "medium".
+  const [efforts, setEfforts] = useState<EffortMap>({});
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   // The "what did we already notify about" log is bookkeeping for an external
   // system (localStorage), not rendered state, so it lives in a ref.
@@ -264,6 +278,7 @@ export function CalendarProvider({
       setNotificationPermission(
         "Notification" in window ? Notification.permission : "unsupported",
       );
+      setEfforts(restoreEffortMap(window.localStorage));
 
       // Opt-in auto-refresh: only present when the user explicitly asked for it.
       const remembered = restoreRememberedSource(window.localStorage);
@@ -328,6 +343,20 @@ export function CalendarProvider({
   }
 
   const dueSoon = useMemo(() => dueSoonTasks(tasks, now), [tasks, now]);
+
+  function setTaskEffort(taskId: string, level: EffortLevel) {
+    setEfforts((previous) => {
+      const next = withEffort(previous, taskId, level);
+      saveEffortMap(window.localStorage, next);
+      return next;
+    });
+  }
+
+  // Recomputed from the current tasks, so the plan always matches the screen.
+  const plan = useMemo(
+    () => buildPlan(tasks, completedIds, efforts, now),
+    [tasks, completedIds, efforts, now],
+  );
 
   // Nudge at most once per set of due tasks, and only while the app is open:
   // without a push server a web page cannot wake itself up in the background.
@@ -426,6 +455,8 @@ export function CalendarProvider({
     clearImportedCalendar(window.localStorage);
     clearCompletedTaskIds(window.localStorage, "imported");
     clearRememberedSource(window.localStorage);
+    saveEffortMap(window.localStorage, {});
+    setEfforts({});
     setRememberSource(false);
     setHasSavedImport(false);
     setCalendarName(null);
@@ -489,6 +520,9 @@ export function CalendarProvider({
     groups,
     visibleCount,
     dueSoon,
+    efforts,
+    setTaskEffort,
+    plan,
     insights,
     completionPercent,
     busiestDay,

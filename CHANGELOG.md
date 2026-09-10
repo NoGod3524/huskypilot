@@ -4,10 +4,33 @@ Every notable change to HuskyPilot, oldest first. Each entry corresponds to a
 merged pull request, and each version tag marks the state of `main` right after
 that merge.
 
-While the project is pre-1.0 the scheme is deliberately simple:
+The scheme is deliberately simple:
 
-- **Patch** (`0.1.x`, `0.2.x`, …) — a fix, a cleanup, documentation, or a small addition.
-- **Minor** (`0.2.0`, `0.3.0`, …) — a new capability, or a change to the architecture.
+- **Patch** (`0.1.x`, `0.2.x`, `1.0.x`) — a fix, a cleanup, documentation, or a small addition.
+- **Minor** (`0.2.0`, `0.3.0`, `1.1.0`) — a new capability, or a change to the architecture.
+
+## 1.0.0 — Plan
+
+*First stable release. HuskyPilot stops only showing what is due and starts
+saying what to work on next.*
+
+### Added
+
+- A **Plan** route (`/plan`) that compares how much work each deadline needs with
+  the days remaining.
+- **Effort estimates** per task — quick (15 min), medium (45), long (90) — set
+  with one click and kept in the browser.
+- **At-risk detection**: a task is flagged when the sittings it still needs
+  exceed the days available, so "start now" becomes visible before it is too
+  late. One sitting is 30 focused minutes.
+- **Overdue surfacing**: deadlines that already passed and are still unticked now
+  have a home, instead of quietly dropping out of the week view.
+- A suggested focus total for today, counting the overdue and at-risk work.
+
+### Changed
+
+- `dueTimestamp` moved from `reminders` into `date-utils`, beside the other date
+  helpers.
 
 ## [0.3.1](https://github.com/NoGod3524/huskypilot/releases/tag/v0.3.1) — Version footer and settled history
 

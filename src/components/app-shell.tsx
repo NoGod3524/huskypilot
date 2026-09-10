@@ -9,6 +9,7 @@ import {
   ChartColumn,
   Check,
   LayoutDashboard,
+  ListChecks,
   Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -19,6 +20,7 @@ import { t } from "@/lib/i18n";
 
 const NAV_ITEMS = [
   { href: "/", key: "nav.dashboard", Icon: LayoutDashboard },
+  { href: "/plan", key: "nav.plan", Icon: ListChecks },
   { href: "/tasks", key: "nav.tasks", Icon: Check },
   { href: "/calendar", key: "nav.calendar", Icon: CalendarDays },
   { href: "/insights", key: "insights.eyebrow", Icon: ChartColumn },
