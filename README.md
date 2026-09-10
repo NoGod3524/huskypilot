@@ -154,9 +154,9 @@ npm run build
 
 `npm test` runs the `node:test` suite using Node's native TypeScript type stripping — no bundler or test framework needed. Coverage includes ICS parsing (recurring events, all-day events, course extraction), grouping, URL / SSRF rejection, and the versioned import and completion storage modules.
 
-## AI assistance
+## Background
 
-This project was developed with GitHub Copilot as a pair, including its coding agent for multi-file changes, with every change reviewed before it shipped. The architecture, security controls, and trade-offs are documented above so the reasoning can be inspected and explained — not just the output.
+HuskyPilot started as a personal tool. Deadlines were spread across HuskyCT, syllabi, and email, and the existing options either asked for a NetID or wanted more access than a simple "what's due next" view needs. This project is a narrow attempt to fix that: one private calendar feed in, one clear list out, and everything kept on your own device.
 
 ## Roadmap
 
