@@ -1,0 +1,171 @@
+# HuskyPilot
+
+**把你的课程 deadline 整理清楚。** 粘贴 HuskyCT / Blackboard 的私人 ICS 日历链接，得到一份清晰有序的「接下来要交什么」。
+
+[English](./README.md) | **简体中文**
+
+[**在线演示**](https://huskypilot.vercel.app/) · [反馈问题](https://github.com/NoGod3524/huskypilot/issues)
+
+![HuskyPilot](./public/og.png)
+
+## 为什么做这个
+
+UConn 学生的 deadline 散落在 HuskyCT（Blackboard）、课程大纲和邮件里。HuskyPilot 把你本来就有的日历订阅，变成一份滚动的未来 7 天任务清单——「接下来要交什么」一眼可见，不用到处翻。
+
+它刻意做得小而注重隐私：不需要 NetID、不需要密码、不爬取网页、不需要注册账号。
+
+## 功能
+
+- **导入任意 ICS 订阅** —— 粘贴 HuskyCT / Blackboard 的私人日历链接
+- **滚动 7 天视图** —— 今天 / 明天 / 本周，分组并按时间排序
+- **完成勾选** —— 勾选任务；状态存在浏览器里，刷新不丢
+- **English / 简体中文** —— 一键切换语言，选择会被记住
+- **本地持久化** —— 重新导入同一份日历，勾选状态会保留
+- **隐私优先设计** —— ICS 链接从不被保存；只有解析后的任务字段存在你的浏览器里
+
+## 架构
+
+```mermaid
+flowchart TB
+    subgraph Browser["浏览器 - React 客户端"]
+        UI["Dashboard UI<br/>dashboard.tsx"]
+        VIEW["calendar-view.ts<br/>分组 + 格式化"]
+        STORE[("localStorage<br/>日历 - 勾选 - 语言")]
+    end
+
+    subgraph Server["Next.js 服务端 - Node 运行时"]
+        API["POST /api/calendar/import<br/>route.ts"]
+        GUARD["safe-fetch.ts<br/>防 SSRF 的 HTTPS 抓取"]
+        PARSE["parse-calendar.ts<br/>node-ical 解析为 CalendarTask 列表"]
+    end
+
+    FEED[("HuskyCT / Blackboard<br/>私人 ICS 订阅")]
+
+    UI -->|"1 粘贴 ICS 链接"| API
+    API -->|"2 zod 校验"| GUARD
+    GUARD -->|"3 HTTPS GET"| FEED
+    FEED -->|"4 ICS 文本"| PARSE
+    PARSE -->|"5 事件 JSON"| API
+    API -->|"6 JSON 响应"| UI
+    UI --> VIEW
+    UI <-->|"7 保存 / 恢复"| STORE
+
+    classDef client fill:#eaf2ff,stroke:#2a71d8,color:#12314f
+    classDef server fill:#eef7f1,stroke:#2f8f5b,color:#123a26
+    classDef feed fill:#fff4e8,stroke:#d98324,color:#5a3410
+    class UI,VIEW,STORE client
+    class API,GUARD,PARSE server
+    class FEED feed
+```
+
+### 一次导入的流程
+
+1. 你在页面里粘贴 ICS 链接。
+2. 前端把它 `POST` 到 `/api/calendar/import`（Next.js 的 Node 运行时路由处理函数）。
+3. 用 Zod 校验请求体（一个 `url` 字段，≤ 2048 字符；请求体 ≤ 4 KB）。
+4. `safe-fetch.ts` 校验并下载日历（见下面**安全**一节）。
+5. `parse-calendar.ts` 用 `node-ical` 解析：展开重复事件、处理全天事件、从标题里提取课程名。
+6. 路由返回 `{ calendarName, importedAt, events[] }` JSON，并带 `Cache-Control: no-store`。
+7. 前端把事件分到 今天 / 明天 / 本周 并渲染；已完成的任务 ID 和语言选择存在 `localStorage`。
+
+## 安全：如何安全地抓取用户提供的 URL
+
+让用户提供一个 URL、由服务器去抓取，是典型的 SSRF 攻击面，所以下载路径（`src/lib/safe-fetch.ts`）写得非常严格：
+
+| 控制 | 作用 |
+|---|---|
+| 只允许 HTTPS | 拒绝 `http:`、带用户名或密码的 URL、以及 443 以外的端口 |
+| 预解析 DNS | 解析所有地址，拒绝内网、回环、链路本地、组播和保留地址段（IPv4 与 IPv6） |
+| 绑定已验证 IP | 连接到**校验通过的 IP**，同时保留原始 `Host` 头和 TLS SNI，降低 DNS rebinding 风险 |
+| 限制重定向 | 最多跟随 3 次重定向，且每一跳都重新校验 |
+| 大小与时间上限 | 超过 2 MB（声明值和实际流式字节都检查）一律拒绝；8 秒超时 |
+| 内容校验 | 必须包含 `BEGIN:VCALENDAR` / `END:VCALENDAR` |
+
+出错时记录日志，但**绝不把私人的日历 URL 写进日志**。
+
+## 隐私模型
+
+| 数据 | 存在哪 |
+|---|---|
+| 你的 ICS 链接 | 哪里都不存——只用一次 |
+| 解析后的事件 | 只在你浏览器的 `localStorage` |
+| 已完成的任务 ID | 只在你浏览器的 `localStorage` |
+| 语言选择 | 只在你浏览器的 `localStorage` |
+
+没有 NetID、没有密码、没有账号、没有数据库、没有统计埋点。「清空已保存数据」会把日历和勾选状态一起清掉。
+
+## 技术栈
+
+| 层 | 选型 |
+|---|---|
+| 框架 | Next.js 16（App Router） |
+| 语言 | TypeScript，测试用原生类型擦除（type stripping） |
+| 界面 | React 19、Tailwind CSS 4、lucide-react |
+| 日历解析 | node-ical |
+| 校验 | Zod |
+| 测试 | Node 内置测试运行器（`node --test`） |
+| 部署 | Vercel |
+
+## 项目结构
+
+```text
+src/
+├─ app/
+│  ├─ api/calendar/import/route.ts   # POST 接口：校验 -> 抓取 -> 解析 -> JSON
+│  ├─ layout.tsx                     # 元数据与 Open Graph
+│  ├─ page.tsx                       # 入口
+│  ├─ globals.css
+│  └─ icon.tsx
+├─ components/
+│  └─ dashboard.tsx                  # 导入表单、任务卡、勾选、语言切换
+└─ lib/
+   ├─ safe-fetch.ts                  # 防 SSRF 的 HTTPS 下载
+   ├─ parse-calendar.ts              # ICS 解析 -> CalendarTask[]
+   ├─ calendar-view.ts               # 分组（今天 / 明天 / 本周）与时间格式化
+   ├─ calendar-types.ts              # 共享类型
+   ├─ import-storage.ts              # 带版本的 localStorage（导入的事件）
+   ├─ completion-storage.ts          # 带版本的 localStorage（已完成的任务 ID）
+   └─ i18n.ts                        # 中英文字典与查表函数
+tests/                               # node:test 测试
+```
+
+## 本地运行
+
+需要 **Node.js 22+**（测试脚本依赖原生 TypeScript 类型擦除）。
+
+```bash
+npm install
+npm run dev      # http://localhost:3000
+npm test         # 解析、分组、URL 拦截、存储
+npm run lint
+npm run build
+```
+
+## 设计取舍
+
+- **在服务端抓取，而不是在浏览器里抓。** 日历服务器基本不会返回宽松的 CORS 头；而且把下载集中在一个模块（`safe-fetch.ts`）里，SSRF 防护更好审查。
+- **绝不保存 ICS 链接。** 订阅链接里嵌着私人 token。保存它就能做后台自动同步，但会破坏隐私承诺——所以现阶段选择手动重新导入。
+- **每个存储结构都带版本号。** 每条 `localStorage` 都是带版本、经过结构校验的对象；损坏的数据会被丢弃（并告知用户），而不是让页面崩溃。
+- **完成状态按事件 ID 记录。** ID 由事件的 UID 加开始时间生成，所以重新导入同一份日历能保留勾选状态；但如果源日历改了某个事件的开始时间，它的 ID 会变、勾选会重置（已知限制）。
+- **滚动 7 天，而不是自然周。** 这个应用回答的是「接下来要交什么」，不是「这周日历格子上有什么」。
+- **不引入 i18n 库。** 字符串集合有限且不大，两份字典加一个查表函数就够了。
+
+## 测试
+
+`npm test` 用 Node 原生的 TypeScript 类型擦除运行 `node:test` 测试，不需要打包器或测试框架。覆盖范围包括：ICS 解析（重复事件、全天事件、课程名提取）、分组、URL / SSRF 拦截，以及带版本的导入与勾选存储模块。
+
+## AI 使用说明
+
+这个项目是在 GitHub Copilot 的协助下开发的（包括用它的 coding agent 做多文件改动），每一处改动在合并前都经过人工审查。上面记录了架构、安全控制和取舍，是为了让推理过程可被检查、可被解释——而不只是看结果。
+
+## 路线图
+
+- [ ] CI：每个 Pull Request 自动跑 `test` / `lint` / `build`
+- [ ] 洞察页：按课程的任务量、最忙的周、完成率
+- [ ] 可选的自动刷新（需要把订阅链接存在本地）
+- [ ] 到期提醒 / 通知
+- [ ] 导出任务为 CSV / JSON
+
+## 作者
+
+由 [Yinuo (NoGod3524)](https://github.com/NoGod3524) 构建，一名 UConn 学生。

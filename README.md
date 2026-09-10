@@ -1,108 +1,171 @@
-# HuskyPilot V0
+# HuskyPilot
 
-HuskyPilot 把 HuskyCT / Blackboard 的 ICS 日历链接转换成一个清晰的课程 deadline dashboard。V0 只做一件事：读取日历、找出未来事件、按 **Today / Tomorrow / This Week** 排序展示。
+**Your course deadlines, organized.** Paste a private HuskyCT / Blackboard ICS calendar link and get one calm, ordered view of what's due next.
 
-## 已经完成
+**English** | [简体中文](./README.zh.md)
 
-- Next.js 16 + TypeScript + Tailwind CSS 项目
-- 响应式 dashboard，手机和电脑都能使用
-- ICS URL 输入和真实导入状态
-- 后端安全下载：只接受 HTTPS、拦截内网地址、限制重定向、8 秒超时、2 MB 上限
-- 解析 VEVENT、VTODO、全天事件、时区和重复事件
-- 自动提取课程名，按未来 7 天分组并按时间排序
-- 不连接 NetID、不爬虫、不保存密码、不保存日历 URL、不使用 AI
-- 自动测试、代码检查和正式构建
+[**Live demo**](https://huskypilot.vercel.app/) · [Report an issue](https://github.com/NoGod3524/huskypilot/issues)
 
-> **隐私提醒：** ICS 链接通常包含一段私人 token。任何拿到链接的人都可能看到你的日历。不要把真实链接贴进 GitHub、聊天截图、代码或 `.env` 文件。只在本地运行的 HuskyPilot 输入框里粘贴。
+![HuskyPilot](./public/og.png)
 
-## 0 基础：第一次运行
+## Why
 
-你需要安装：
+UConn students track deadlines across HuskyCT (Blackboard), syllabi, and email. HuskyPilot turns the calendar feed you already have into a single rolling 7-day list, so "what's due next" is one glance instead of a scavenger hunt.
 
-1. [Node.js](https://nodejs.org/)（选择 LTS 版本）
-2. [Git](https://git-scm.com/downloads)
-3. [VS Code](https://code.visualstudio.com/)
-4. VS Code 里的 **GitHub Copilot** 和 **GitHub Copilot Chat** 扩展
+It is deliberately small and privacy-first: no NetID, no password, no scraping, no account.
 
-然后：
+## Features
 
-1. 用 VS Code 打开整个 `huskypilot` 文件夹。
-2. 在顶部菜单选择 **Terminal → New Terminal**。
-3. 输入 `npm install` 并按 Enter，等待安装结束。
-4. 输入 `npm run dev` 并按 Enter。
-5. 浏览器打开 [http://localhost:3000](http://localhost:3000)。
-6. 结束运行时，在终端按 `Ctrl + C`。
+- **Import any ICS feed** — paste your HuskyCT / Blackboard private calendar URL
+- **Rolling 7-day view** — Today / Tomorrow / This week, grouped and time-sorted
+- **Completion tracking** — tick tasks done; the state is saved in your browser and survives refresh
+- **English / 简体中文** — one-click language toggle, remembered across visits
+- **Local persistence** — re-importing the same calendar preserves your completion state
+- **Privacy by design** — your ICS URL is never stored; only parsed task fields live in your browser
 
-如果页面显示 HuskyPilot 和示例任务，说明环境成功了。
+## Architecture
 
-## 获取并导入 ICS 链接
+```mermaid
+flowchart TB
+    subgraph Browser["Browser - React client"]
+        UI["Dashboard UI<br/>dashboard.tsx"]
+        VIEW["calendar-view.ts<br/>group + format"]
+        STORE[("localStorage<br/>calendar - completion - locale")]
+    end
 
-1. 在 HuskyCT / Blackboard 打开 Calendar。
-2. 在日历的设置、分享或外部日历选项里寻找 **iCal / ICS / External Calendar Link**。
-3. 复制完整的 HTTPS 链接。它通常很长，这是正常的。
-4. 回到 HuskyPilot，粘贴链接并选择 **Import calendar**。
+    subgraph Server["Next.js server - Node runtime"]
+        API["POST /api/calendar/import<br/>route.ts"]
+        GUARD["safe-fetch.ts<br/>SSRF-guarded HTTPS fetch"]
+        PARSE["parse-calendar.ts<br/>node-ical to CalendarTask list"]
+    end
 
-成功后，示例任务会被真实日历替换。导入后的事件会保存在当前浏览器的本地存储中，刷新页面后会自动恢复；你也可以在页面里点击 **Clear saved data** 清除这些本地数据。项目不会把 ICS URL 持久化保存。
+    FEED[("HuskyCT / Blackboard<br/>private ICS feed")]
 
-## 常用命令
+    UI -->|"1 paste ICS URL"| API
+    API -->|"2 zod validate"| GUARD
+    GUARD -->|"3 HTTPS GET"| FEED
+    FEED -->|"4 ICS text"| PARSE
+    PARSE -->|"5 JSON events"| API
+    API -->|"6 JSON response"| UI
+    UI --> VIEW
+    UI <-->|"7 persist / restore"| STORE
 
-```bash
-npm run dev      # 本地开发，代码修改后页面自动刷新
-npm test         # 测试解析、分组和安全拦截
-npm run lint     # 检查常见代码问题
-npm run build    # 检查正式版本能否成功构建
+    classDef client fill:#eaf2ff,stroke:#2a71d8,color:#12314f
+    classDef server fill:#eef7f1,stroke:#2f8f5b,color:#123a26
+    classDef feed fill:#fff4e8,stroke:#d98324,color:#5a3410
+    class UI,VIEW,STORE client
+    class API,GUARD,PARSE server
+    class FEED feed
 ```
 
-## 用 GitHub Copilot 学习和继续开发
+### How an import works
 
-请打开 [COPILOT_PROMPTS.md](./COPILOT_PROMPTS.md)，一次只复制一条 prompt 给 Copilot Chat。每次先看 Copilot 准备改哪些文件，再接受修改，然后运行 `npm test` 和 `npm run lint`。
+1. You paste an ICS URL into the dashboard.
+2. The client `POST`s it to `/api/calendar/import` (a Next.js route handler on the Node runtime).
+3. The payload is validated with Zod (one `url` field, ≤ 2048 characters; request body ≤ 4 KB).
+4. `safe-fetch.ts` validates and downloads the feed (see **Security** below).
+5. `parse-calendar.ts` parses it with `node-ical`, expanding recurring events, handling all-day events, and extracting course codes from titles.
+6. The route returns `{ calendarName, importedAt, events[] }` as JSON with `Cache-Control: no-store`.
+7. The client groups events into Today / Tomorrow / This week and renders them. Completed task IDs and the language choice are kept in `localStorage`.
 
-推荐的 VS Code 节奏：
+## Security: fetching a user-supplied URL safely
 
-1. 在左侧 Explorer 打开目标文件。
-2. 打开 Copilot Chat。
-3. 粘贴一个小 prompt。
-4. 阅读 Copilot 的解释和代码差异。
-5. 不懂的地方立刻追问：“Explain this change line by line for a beginner.”
-6. 运行测试后再开始下一步。
+Downloading a URL that a user provides is a textbook SSRF surface, so the download path (`src/lib/safe-fetch.ts`) is intentionally strict:
 
-## 发布到你的 GitHub
+| Control | What it does |
+|---|---|
+| HTTPS only | Rejects `http:`, URLs containing credentials, and any port other than 443 |
+| DNS pre-resolution | Resolves every address and rejects private, loopback, link-local, multicast, and reserved ranges (IPv4 and IPv6) |
+| Pinned connection | Connects to the **validated IP** while preserving the original `Host` header and TLS SNI, reducing DNS-rebinding risk |
+| Bounded redirects | Follows at most 3 redirects, re-validating each hop |
+| Size and time caps | Rejects responses over 2 MB (both declared and streamed) and times out after 8 seconds |
+| Content check | Requires a `BEGIN:VCALENDAR` / `END:VCALENDAR` payload |
 
-本地 Git 仓库已经初始化，第一版文件也已经放进待提交区。因为 Git 需要使用你自己的姓名和邮箱记录第一次提交，而且创建远程仓库需要你选择 private 或 public，请在 VS Code 完成最后一步：
+Failures are logged without ever writing the private calendar URL to the log.
 
-1. 点击 VS Code 左下角账号图标，登录你的 GitHub 学生账号。
-2. 打开左侧 **Source Control**。
-3. 在 Message 输入 `feat: build HuskyPilot V0 calendar dashboard`，点击 **Commit**。如果 VS Code 提示配置 Git 姓名和邮箱，请按提示使用你的 GitHub 资料。
-4. 点击 **Publish Branch**。
-5. 建议先选择 **Publish to GitHub private repository**，仓库名保持 `huskypilot`。
+## Privacy model
 
-切勿提交真实 ICS URL。这个项目不需要任何 `.env` 密钥。
+| Data | Where it lives |
+|---|---|
+| Your ICS URL | Nowhere — used once, never persisted |
+| Parsed events | `localStorage`, in your browser only |
+| Completed task IDs | `localStorage`, in your browser only |
+| Language choice | `localStorage`, in your browser only |
 
-## 项目地图
+No NetID, no password, no account, no database, no analytics. The **Clear saved data** button wipes the saved calendar and the completion state together.
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript, with native type-stripping for tests |
+| UI | React 19, Tailwind CSS 4, lucide-react |
+| Calendar parsing | node-ical |
+| Validation | Zod |
+| Tests | Node's built-in test runner (`node --test`) |
+| Hosting | Vercel |
+
+## Project structure
 
 ```text
 src/
 ├─ app/
-│  ├─ api/calendar/import/route.ts   # 接收 URL，安全抓取并返回事件
-│  ├─ globals.css                    # 全局颜色和样式
-│  ├─ layout.tsx                     # 页面标题和基础布局
-│  └─ page.tsx                       # 首页入口
-├─ components/dashboard.tsx          # 输入框、状态、三组任务 UI
+│  ├─ api/calendar/import/route.ts   # POST endpoint: validate -> fetch -> parse -> JSON
+│  ├─ layout.tsx                     # Metadata and Open Graph
+│  ├─ page.tsx                       # Entry point
+│  ├─ globals.css
+│  └─ icon.tsx
+├─ components/
+│  └─ dashboard.tsx                  # Import form, task cards, completion, language UI
 └─ lib/
-   ├─ safe-fetch.ts                  # SSRF 防护、超时、大小限制
-   ├─ parse-calendar.ts              # ICS 解析和课程名提取
-   ├─ calendar-view.ts               # Today / Tomorrow / This Week 分组
-   └─ calendar-types.ts              # 前后端共用的数据类型
-tests/calendar.test.ts               # 自动测试
+   ├─ safe-fetch.ts                  # SSRF-hardened HTTPS download
+   ├─ parse-calendar.ts              # ICS parsing -> CalendarTask[]
+   ├─ calendar-view.ts               # Grouping (Today / Tomorrow / This week) and formatting
+   ├─ calendar-types.ts              # Shared types
+   ├─ import-storage.ts              # Versioned localStorage for imported events
+   ├─ completion-storage.ts          # Versioned localStorage for completed task IDs
+   └─ i18n.ts                        # English / 简体中文 dictionaries and lookup
+tests/                               # node:test suites
 ```
 
-## V0 明确不做
+## Getting started
 
-- 不收集 NetID 或密码
-- 不登录 HuskyCT
-- 不抓取网页
-- 不存数据库
-- 不读取成绩或邮件
-- 不加入 OpenAI API 或 AI 功能
+Requires **Node.js 22+** (the test script relies on native TypeScript type stripping).
 
-这些边界能让第一版更安全、更容易理解，也更容易真的做完。
+```bash
+npm install
+npm run dev      # http://localhost:3000
+npm test         # parsing, grouping, URL blocking, storage
+npm run lint
+npm run build
+```
+
+## Design decisions
+
+- **Fetch on the server, not in the browser.** Calendar hosts rarely send permissive CORS headers, and keeping the download in one module (`safe-fetch.ts`) makes the SSRF controls reviewable in a single place.
+- **Never store the ICS URL.** The feed URL embeds a private token. Persisting it would enable background sync, but it would break the privacy promise — so manual re-import is the deliberate trade-off.
+- **Version every stored payload.** Each `localStorage` entry is a versioned, structurally validated object. Malformed data is dropped (and the user is told) instead of crashing the app.
+- **Completion is keyed by event ID.** IDs are derived from the event UID plus start time, so re-importing the same calendar preserves completion. If the source calendar moves an event's start time, its ID changes and completion resets — a known limitation.
+- **A rolling 7 days, not a calendar week.** The question the app answers is "what's due next", not "what is on this week's grid".
+- **No i18n library.** The string set is bounded and small; two dictionaries plus a lookup function were enough.
+
+## Testing
+
+`npm test` runs the `node:test` suite using Node's native TypeScript type stripping — no bundler or test framework needed. Coverage includes ICS parsing (recurring events, all-day events, course extraction), grouping, URL / SSRF rejection, and the versioned import and completion storage modules.
+
+## AI assistance
+
+This project was developed with GitHub Copilot as a pair, including its coding agent for multi-file changes, with every change reviewed before it shipped. The architecture, security controls, and trade-offs are documented above so the reasoning can be inspected and explained — not just the output.
+
+## Roadmap
+
+- [ ] CI: run `test` / `lint` / `build` on every pull request
+- [ ] Insights view: workload by course, busiest weeks, completion rate
+- [ ] Optional, opt-in auto-refresh (would require storing the feed URL locally)
+- [ ] Reminders / due-date notifications
+- [ ] Export tasks to CSV / JSON
+
+## Author
+
+Built by [Yinuo (NoGod3524)](https://github.com/NoGod3524), a UConn student.
