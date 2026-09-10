@@ -4,7 +4,7 @@
 
 [English](./README.md) | **简体中文**
 
-[**在线演示**](https://huskypilot.vercel.app/) · [反馈问题](https://github.com/NoGod3524/huskypilot/issues)
+[**在线演示**](https://huskypilot.vercel.app/) · [更新日志](./CHANGELOG.md) · [反馈问题](https://github.com/NoGod3524/huskypilot/issues)
 
 [![CI](https://github.com/NoGod3524/huskypilot/actions/workflows/ci.yml/badge.svg)](https://github.com/NoGod3524/huskypilot/actions/workflows/ci.yml)
 
