@@ -74,6 +74,16 @@ const en = {
   "insights.byWeek": "Next 4 weeks",
   "insights.uncategorized": "Uncategorized",
   "insights.week": "Week {index}",
+  "reminders.enable": "Due reminders",
+  "reminders.on": "Reminders on",
+  "reminders.off": "Reminders off",
+  "reminders.toggleLabel": "Toggle due reminders",
+  "reminders.enabledNotice": "Due reminders turned on.",
+  "reminders.denied": "Notifications are blocked in this browser. Allow them in the site settings, then try again.",
+  "reminders.unsupported": "This browser does not support notifications.",
+  "reminders.banner": "{count} due in the next 24 hours",
+  "reminders.notificationTitle": "HuskyPilot — deadlines",
+  "reminders.notificationBody": "{count} due in the next 24 hours",
 } as const;
 
 const zhCN: Record<TranslationKey, string> = {
@@ -147,6 +157,16 @@ const zhCN: Record<TranslationKey, string> = {
   "insights.byWeek": "未来 4 周",
   "insights.uncategorized": "未分类",
   "insights.week": "第 {index} 周",
+  "reminders.enable": "到期提醒",
+  "reminders.on": "提醒已开启",
+  "reminders.off": "提醒已关闭",
+  "reminders.toggleLabel": "开关到期提醒",
+  "reminders.enabledNotice": "到期提醒已开启。",
+  "reminders.denied": "此浏览器已阻止通知。请在站点设置中允许通知后重试。",
+  "reminders.unsupported": "此浏览器不支持通知。",
+  "reminders.banner": "未来 24 小时内有 {count} 个任务到期",
+  "reminders.notificationTitle": "HuskyPilot — 到期提醒",
+  "reminders.notificationBody": "未来 24 小时内有 {count} 个任务到期",
 };
 
 export type TranslationKey = keyof typeof en;

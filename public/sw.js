@@ -72,3 +72,19 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Tapping a reminder should bring the app forward instead of opening a copy.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        const existing = clients.find((client) =>
+          client.url.startsWith(self.registration.scope),
+        );
+        return existing ? existing.focus() : self.clients.openWindow("/");
+      }),
+  );
+});

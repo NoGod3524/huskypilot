@@ -1,6 +1,9 @@
 "use client";
 
 import {
+  Bell,
+  BellOff,
+  BellRing,
   CalendarDays,
   ChartColumn,
   Check,
@@ -14,7 +17,7 @@ import {
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   CalendarImportResult,
@@ -40,6 +43,14 @@ import {
 } from "@/lib/calendar-view";
 import { addDays, startOfLocalDay } from "@/lib/date-utils";
 import { computeInsights } from "@/lib/insights";
+import {
+  dueSoonTasks,
+  reminderSignature,
+  restoreReminderState,
+  saveReminderState,
+  shouldNotify,
+  type ReminderState,
+} from "@/lib/reminders";
 import {
   DEFAULT_LOCALE,
   intlLocale,
@@ -147,6 +158,16 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
+  // The "what did we already notify about" log is bookkeeping for an external
+  // system (localStorage), not rendered state, so it lives in a ref.
+  const reminderLog = useRef<{
+    lastSignature: string | null;
+    lastNotifiedAt: string | null;
+  }>({ lastSignature: null, lastNotifiedAt: null });
+  const [notificationPermission, setNotificationPermission] = useState<
+    NotificationPermission | "unsupported"
+  >("default");
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -180,6 +201,16 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
         }
         setCompletedIds(restoreCompletedTaskIds(window.localStorage, "demo"));
       }
+
+      const restoredReminders = restoreReminderState(window.localStorage);
+      setRemindersEnabled(restoredReminders.enabled);
+      reminderLog.current = {
+        lastSignature: restoredReminders.lastSignature,
+        lastNotifiedAt: restoredReminders.lastNotifiedAt,
+      };
+      setNotificationPermission(
+        "Notification" in window ? Notification.permission : "unsupported",
+      );
     }, 0);
 
     return () => window.clearTimeout(timer);
@@ -199,6 +230,76 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
       return next;
     });
   }
+
+  const dueSoon = useMemo(() => dueSoonTasks(tasks, now), [tasks, now]);
+
+  function setReminderEnabled(enabled: boolean) {
+    setRemindersEnabled(enabled);
+    saveReminderState(window.localStorage, { enabled, ...reminderLog.current });
+  }
+
+  async function toggleReminders() {
+    if (remindersEnabled) {
+      setReminderEnabled(false);
+      return;
+    }
+
+    if (!("Notification" in window)) {
+      setError(t(locale, "reminders.unsupported"));
+      return;
+    }
+
+    let permission = Notification.permission;
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
+    setNotificationPermission(permission);
+
+    if (permission !== "granted") {
+      setError(t(locale, "reminders.denied"));
+      return;
+    }
+
+    setReminderEnabled(true);
+    setError(null);
+    setNotice(t(locale, "reminders.enabledNotice"));
+  }
+
+  // Nudge at most once per set of due tasks, and only while the app is open:
+  // without a push server a web page cannot wake itself up in the background.
+  useEffect(() => {
+    if (!remindersEnabled || notificationPermission !== "granted") return;
+    if (dueSoon.length === 0) return;
+
+    const signature = reminderSignature(dueSoon);
+    const current: ReminderState = { enabled: true, ...reminderLog.current };
+    if (!shouldNotify(current, signature, new Date())) return;
+
+    const title = t(locale, "reminders.notificationTitle");
+    const options = {
+      body: t(locale, "reminders.notificationBody", { count: dueSoon.length }),
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: "huskypilot-due",
+    };
+
+    if ("serviceWorker" in navigator) {
+      void navigator.serviceWorker.ready
+        .then((registration) => registration.showNotification(title, options))
+        .catch(() => undefined);
+    } else {
+      new Notification(title, options);
+    }
+
+    reminderLog.current = {
+      lastSignature: signature,
+      lastNotifiedAt: new Date().toISOString(),
+    };
+    saveReminderState(window.localStorage, {
+      enabled: true,
+      ...reminderLog.current,
+    });
+  }, [remindersEnabled, notificationPermission, dueSoon, locale]);
 
   const groups = useMemo(() => groupTasks(tasks, now, locale), [tasks, now, locale]);
   const visibleCount = groups.reduce(
@@ -458,6 +559,26 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                   {t(locale, "language.chinese")}
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void toggleReminders();
+                }}
+                aria-pressed={remindersEnabled}
+                aria-label={t(locale, "reminders.toggleLabel")}
+                title={
+                  remindersEnabled
+                    ? t(locale, "reminders.on")
+                    : t(locale, "reminders.off")
+                }
+                className={`grid size-9 shrink-0 place-items-center rounded-full border transition ${
+                  remindersEnabled
+                    ? "border-[var(--navy)] bg-[var(--navy)] text-white"
+                    : "border-[var(--line)] bg-white text-[var(--muted)] hover:text-[#172b41]"
+                }`}
+              >
+                {remindersEnabled ? <BellRing size={16} /> : <BellOff size={16} />}
+              </button>
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-semibold">{t(locale, "header.studentName")}</p>
                 <p className="text-xs text-[var(--muted)]">{t(locale, "header.privateDashboard")}</p>
@@ -561,6 +682,16 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
             )}
 
           </section>
+
+          {dueSoon.length > 0 && (
+            <div
+              className="mt-6 flex items-start gap-2.5 rounded-2xl border border-[#f0d9a8] bg-[#fffaf0] px-4 py-3 text-sm text-[#8a5a12]"
+              role="status"
+            >
+              <Bell size={17} className="mt-0.5 shrink-0" />
+              <span>{t(locale, "reminders.banner", { count: dueSoon.length })}</span>
+            </div>
+          )}
 
           <div className="mt-8 flex items-end justify-between gap-4" id="tasks">
             <div>
