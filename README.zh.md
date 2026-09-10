@@ -18,9 +18,12 @@ UConn 学生的 deadline 散落在 HuskyCT（Blackboard）、课程大纲和邮�
 
 ## 功能
 
-- **导入任意 ICS 订阅** —— 粘贴 HuskyCT / Blackboard 的私人日历链接
+- **导入任意 ICS 订阅** —— 粘贴 HuskyCT / Blackboard 的私人日历链接，页面内置「去哪找链接」引导
 - **滚动 7 天视图** —— 今天 / 明天 / 本周，分组并按时间排序
+- **到期提醒** —— 未来 24 小时有任务到期时显示横幅；可选开启浏览器通知（App 打开时生效）
+- **可安装 + 离线** —— 作为 PWA 加到手机主屏幕，没网也能看已保存的任务
 - **完成勾选** —— 勾选任务；状态存在浏览器里，刷新不丢
+- **任务负担洞察** —— 完成率、各课程任务量、未来 7 天 / 4 周一览
 - **English / 简体中文** —— 一键切换语言，选择会被记住
 - **本地持久化** —— 重新导入同一份日历，勾选状态会保留
 - **隐私优先设计** —— ICS 链接从不被保存；只有解析后的任务字段存在你的浏览器里
@@ -114,20 +117,28 @@ flowchart TB
 src/
 ├─ app/
 │  ├─ api/calendar/import/route.ts   # POST 接口：校验 -> 抓取 -> 解析 -> JSON
-│  ├─ layout.tsx                     # 元数据与 Open Graph
+│  ├─ layout.tsx                     # 元数据、主题、注册 Service Worker
+│  ├─ manifest.ts                    # PWA 清单（可安装）
 │  ├─ page.tsx                       # 入口
 │  ├─ globals.css
 │  └─ icon.tsx
 ├─ components/
-│  └─ dashboard.tsx                  # 导入表单、任务卡、勾选、语言切换
+│  ├─ dashboard.tsx                  # 导入表单、任务卡、勾选、提醒、语言切换
+│  └─ service-worker-registrar.tsx   # 注册离线 Service Worker（仅生产环境）
 └─ lib/
    ├─ safe-fetch.ts                  # 防 SSRF 的 HTTPS 下载
    ├─ parse-calendar.ts              # ICS 解析 -> CalendarTask[]
    ├─ calendar-view.ts               # 分组（今天 / 明天 / 本周）与时间格式化
    ├─ calendar-types.ts              # 共享类型
+   ├─ date-utils.ts                  # 共享的本地日期工具
+   ├─ insights.ts                    # 任务负担分析（完成率、各课程、各周）
+   ├─ reminders.ts                   # 到期检测与提醒设置
    ├─ import-storage.ts              # 带版本的 localStorage（导入的事件）
    ├─ completion-storage.ts          # 带版本的 localStorage（已完成的任务 ID）
    └─ i18n.ts                        # 中英文字典与查表函数
+public/
+├─ sw.js                             # 离线应用外壳 Service Worker
+└─ icons/                            # PWA 图标（192 / 512 / maskable）
 tests/                               # node:test 测试
 ```
 
@@ -151,6 +162,8 @@ npm run build
 - **完成状态按事件 ID 记录。** ID 由事件的 UID 加开始时间生成，所以重新导入同一份日历能保留勾选状态；但如果源日历改了某个事件的开始时间，它的 ID 会变、勾选会重置（已知限制）。
 - **滚动 7 天，而不是自然周。** 这个应用回答的是「接下来要交什么」，不是「这周日历格子上有什么」。
 - **不引入 i18n 库。** 字符串集合有限且不大，两份字典加一个查表函数就够了。
+- **提醒只在 App 打开时生效。** 真正的后台推送需要推送服务器和订阅存储，这是本项目刻意避开的。所以提醒做成「App 内横幅 + 可选通知」，并用任务指纹去重，不会重复轰炸。
+- **离线指的是应用外壳，不是数据。** Service Worker 对页面导航走网络优先（保证新部署立刻生效）、对带哈希的静态资源走缓存优先，且永不缓存导入接口；任务数据本来就在 `localStorage` 里。
 
 ## 测试
 
@@ -164,8 +177,10 @@ HuskyPilot 最初是一个自用工具。deadline 散落在 HuskyCT、课程大�
 
 - [x] CI：每个 Pull Request 自动跑 `test` / `lint` / `build`
 - [x] 洞察页：按课程的任务量、最忙的周、完成率
+- [x] 可安装的 PWA（含离线应用外壳）
+- [x] 到期提醒（App 打开时生效）
 - [ ] 可选的自动刷新（需要把订阅链接存在本地）
-- [ ] 到期提醒 / 通知
+- [ ] 后台推送提醒（需要推送服务器）
 - [ ] 导出任务为 CSV / JSON
 
 ## 作者
