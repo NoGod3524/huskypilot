@@ -19,6 +19,7 @@ It is deliberately small and privacy-first: no NetID, no password, no scraping, 
 ## Features
 
 - **Import any ICS feed** — paste your HuskyCT / Blackboard private calendar URL, with built-in help for finding it
+- **Plan** — set how big each task is (quick / medium / long) and HuskyPilot warns you honestly when the days left no longer fit the work, and resurfaces anything already overdue
 - **Rolling 7-day view** — Today / Tomorrow / This week, grouped and time-sorted
 - **Due-soon reminders** — an in-app banner for anything due in the next 24 hours, plus optional browser notifications while the app is open
 - **Installable and offline** — add it to a phone's home screen as a PWA and keep reading saved tasks without a connection

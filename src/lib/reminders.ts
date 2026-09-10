@@ -1,5 +1,9 @@
 import type { CalendarTask } from "./calendar-types.ts";
-import { taskDate } from "./date-utils.ts";
+import { dueTimestamp } from "./date-utils.ts";
+
+// "When is this task due" is a date concern, so it lives in date-utils and is
+// re-exported here to keep existing imports working.
+export { dueTimestamp };
 
 export const REMINDER_STORAGE_KEY = "huskypilot.reminders.v1";
 const REMINDER_STORAGE_VERSION = 1;
@@ -27,24 +31,6 @@ type StoredReminderPayload = ReminderState & { version: number };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-/**
- * The moment a task is actually due: its start time, or the end of the day for
- * an all-day task (an all-day deadline means "by the end of that day").
- * Returns `null` when the task has an unparseable date.
- */
-export function dueTimestamp(task: CalendarTask): number | null {
-  const date = taskDate(task);
-  if (Number.isNaN(date.valueOf())) return null;
-
-  if (task.allDay) {
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-    return endOfDay.valueOf();
-  }
-
-  return date.valueOf();
 }
 
 /** Tasks due between now and `windowHours` from now, soonest first. */

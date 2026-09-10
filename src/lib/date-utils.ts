@@ -23,3 +23,21 @@ export function taskDate(task: CalendarTask): Date {
   }
   return new Date(task.start);
 }
+
+/**
+ * The moment a task is actually due: its start time, or the end of the day for
+ * an all-day task (an all-day deadline means "by the end of that day").
+ * Returns `null` when the task has an unparseable date.
+ */
+export function dueTimestamp(task: CalendarTask): number | null {
+  const date = taskDate(task);
+  if (Number.isNaN(date.valueOf())) return null;
+
+  if (task.allDay) {
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    return endOfDay.valueOf();
+  }
+
+  return date.valueOf();
+}
