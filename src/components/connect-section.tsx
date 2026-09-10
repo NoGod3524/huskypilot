@@ -3,6 +3,7 @@
 import { Check, ChevronRight, Link2, LoaderCircle, TriangleAlert } from "lucide-react";
 
 import { useCalendar } from "@/components/calendar-provider";
+import { COURSE_COMPONENTS, type CourseComponent } from "@/lib/course-label";
 import { t } from "@/lib/i18n";
 
 /** The "connect your HuskyCT calendar" card: URL form, opt-in memory, help, status. */
@@ -17,6 +18,8 @@ export function ConnectSection() {
     notice,
     rememberSource,
     toggleRememberSource,
+    courseLabel,
+    updateCourseLabel,
   } = useCalendar();
 
   return (
@@ -87,6 +90,47 @@ export function ConnectSection() {
           <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
             {t(locale, "connect.rememberHint")}
           </p>
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--line)] px-5 py-3 sm:px-7">
+        <label htmlFor="course-code" className="text-sm font-semibold text-[#31506f]">
+          {t(locale, "course.title")}
+        </label>
+        <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
+          {t(locale, "course.hint")}
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            id="course-code"
+            type="text"
+            value={courseLabel?.code ?? ""}
+            onChange={(event) =>
+              updateCourseLabel(event.target.value, courseLabel?.component ?? null)
+            }
+            placeholder={t(locale, "course.codePlaceholder")}
+            aria-label={t(locale, "course.codeLabel")}
+            className="h-9 w-44 rounded-lg border border-[var(--line-strong)] bg-[#fbfcfe] px-3 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
+          />
+          <select
+            aria-label={t(locale, "course.component")}
+            value={courseLabel?.component ?? ""}
+            disabled={!courseLabel}
+            onChange={(event) =>
+              updateCourseLabel(
+                courseLabel?.code ?? "",
+                (event.target.value || null) as CourseComponent | null,
+              )
+            }
+            className="h-9 rounded-lg border border-[var(--line-strong)] bg-[#fbfcfe] px-3 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10 disabled:opacity-60"
+          >
+            <option value="">{t(locale, "course.componentNone")}</option>
+            {COURSE_COMPONENTS.map((component) => (
+              <option key={component} value={component}>
+                {component}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

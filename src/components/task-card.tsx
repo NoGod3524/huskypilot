@@ -2,6 +2,7 @@
 
 import { Clock3, MapPin } from "lucide-react";
 
+import { useCalendar } from "@/components/calendar-provider";
 import type { CalendarTask, TaskGroup } from "@/lib/calendar-types";
 import { formatTaskTime, isDueSoon } from "@/lib/calendar-view";
 import { t, type Locale } from "@/lib/i18n";
@@ -37,7 +38,10 @@ export function TaskCard({
   onToggleComplete: (taskId: string) => void;
   locale: Locale;
 }) {
-  const course = task.course ?? "CALENDAR";
+  const { courseLabel } = useCalendar();
+  // Blackboard exports no course name. Rather than invent one, fall back to the
+  // label the user set for this calendar, and show nothing when there is none.
+  const course = (task.course ?? courseLabel?.code ?? "").trim() || null;
   const checkboxId = `task-complete-${task.id}`;
 
   return (
@@ -55,12 +59,21 @@ export function TaskCard({
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
-            <span
-              className={`max-w-[70%] truncate rounded-md px-2 py-1 text-[10px] font-bold tracking-[0.06em] ${styleForCourse(course)}`}
-              title={course}
-            >
-              {course}
-            </span>
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {course && (
+                <span
+                  className={`max-w-full truncate rounded-md px-2 py-1 text-[10px] font-bold tracking-[0.06em] ${styleForCourse(course)}`}
+                  title={course}
+                >
+                  {course}
+                </span>
+              )}
+              {task.kind && (
+                <span className="shrink-0 rounded-md bg-[#f0f3f7] px-2 py-1 text-[10px] font-bold tracking-[0.06em] text-[#536476]">
+                  {t(locale, task.kind === "class" ? "kind.class" : "kind.assignment")}
+                </span>
+              )}
+            </div>
             {isDueSoon(task, now) && (
               <span className="shrink-0 rounded-full bg-[#fff0ed] px-2 py-1 text-[10px] font-bold text-[#c5402d]">
                 {t(locale, "badge.dueSoon")}

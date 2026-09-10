@@ -9,7 +9,34 @@ The scheme is deliberately simple:
 - **Patch** (`0.1.x`, `0.2.x`, `1.0.x`) — a fix, a cleanup, documentation, or a small addition.
 - **Minor** (`0.2.0`, `0.3.0`, `1.1.0`) — a new capability, or a change to the architecture.
 
-## 1.0.0 — Plan
+## [1.0.1](https://github.com/NoGod3524/huskypilot/releases/tag/v1.0.1) — Rows you can actually recognise
+
+*Patch: the Plan route used to print `CALENDAR — Take-home Quiz 1` and nothing
+else. It now says which course the row belongs to, what kind of entry it is, and
+exactly when and where it happens.*
+
+### Added
+
+- A **course label** on the import page: name the feed once — a code plus
+  LEC / DIS / LAB / SEM — and every imported row carries it. A Blackboard export
+  contains no course name at all, so the only person who can supply one is the
+  person who subscribed to the feed. ([#21])
+- A **kind badge** on Plan and Tasks rows, *Class* or *Assignment*, read from the
+  Blackboard UID — the only field in the feed that distinguishes the two. ([#21])
+- Plan rows now show the **exact due moment** (`Fri, Sep 11, 12:30 PM`) and the
+  **room**, so a row is no longer just a relative "in 3 days".
+
+### Fixed
+
+- Typing a space into the course code no longer swallows it. The label is saved
+  on every keystroke, so `NRE 1000E` used to collapse into `NRE1000E`.
+
+### Removed
+
+- The `CALENDAR` placeholder that appeared on every task with no course of its
+  own. A row now shows nothing rather than something untrue.
+
+## [1.0.0](https://github.com/NoGod3524/huskypilot/releases/tag/v1.0.0) — Plan
 
 *First stable release. HuskyPilot stops only showing what is due and starts
 saying what to work on next.*
@@ -17,7 +44,7 @@ saying what to work on next.*
 ### Added
 
 - A **Plan** route (`/plan`) that compares how much work each deadline needs with
-  the days remaining.
+  the days remaining. ([#20])
 - **Effort estimates** per task — quick (15 min), medium (45), long (90) — set
   with one click and kept in the browser.
 - **At-risk detection**: a task is flagged when the sittings it still needs
@@ -204,3 +231,6 @@ saying what to work on next.*
 [#16]: https://github.com/NoGod3524/huskypilot/pull/16
 [#17]: https://github.com/NoGod3524/huskypilot/pull/17
 [#18]: https://github.com/NoGod3524/huskypilot/pull/18
+[#19]: https://github.com/NoGod3524/huskypilot/pull/19
+[#20]: https://github.com/NoGod3524/huskypilot/pull/20
+[#21]: https://github.com/NoGod3524/huskypilot/pull/21

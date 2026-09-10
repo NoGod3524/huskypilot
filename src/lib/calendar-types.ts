@@ -1,3 +1,10 @@
+/**
+ * What a Blackboard entry actually is, read from its UID. Blackboard puts class
+ * meetings and graded items in the same calendar, and nothing else in the
+ * payload tells them apart.
+ */
+export type TaskKind = "class" | "assignment";
+
 export type CalendarTask = {
   id: string;
   title: string;
@@ -7,6 +14,8 @@ export type CalendarTask = {
   end: string | null;
   allDay: boolean;
   location: string | null;
+  /** Absent on older saved payloads, and on feeds that are not Blackboard. */
+  kind?: TaskKind | null;
 };
 
 export type CalendarImportResult = {

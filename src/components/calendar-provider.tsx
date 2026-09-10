@@ -32,6 +32,13 @@ import {
   type EffortMap,
 } from "@/lib/effort";
 import { buildPlan, type Plan } from "@/lib/plan";
+import {
+  clearCourseLabel,
+  restoreCourseLabel,
+  saveCourseLabel,
+  type CourseComponent,
+  type CourseLabel,
+} from "@/lib/course-label";
 import { computeInsights, type Insights } from "@/lib/insights";
 import {
   dueSoonTasks,
@@ -71,6 +78,8 @@ type CalendarContextValue = {
 
   efforts: EffortMap;
   setTaskEffort: (taskId: string, level: EffortLevel) => void;
+  courseLabel: CourseLabel | null;
+  updateCourseLabel: (code: string, component: CourseComponent | null) => void;
   plan: Plan;
 
   insights: Insights;
@@ -144,6 +153,8 @@ export function CalendarProvider({
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
   // Task id -> how much work the user says it is. Defaults to "medium".
   const [efforts, setEfforts] = useState<EffortMap>({});
+  // The course this calendar belongs to. A Blackboard feed never says.
+  const [courseLabel, setCourseLabel] = useState<CourseLabel | null>(null);
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   // The "what did we already notify about" log is bookkeeping for an external
   // system (localStorage), not rendered state, so it lives in a ref.
@@ -279,6 +290,7 @@ export function CalendarProvider({
         "Notification" in window ? Notification.permission : "unsupported",
       );
       setEfforts(restoreEffortMap(window.localStorage));
+      setCourseLabel(restoreCourseLabel(window.localStorage));
 
       // Opt-in auto-refresh: only present when the user explicitly asked for it.
       const remembered = restoreRememberedSource(window.localStorage);
@@ -350,6 +362,11 @@ export function CalendarProvider({
       saveEffortMap(window.localStorage, next);
       return next;
     });
+  }
+
+  /** Stores the course the whole feed belongs to; an empty code clears it. */
+  function updateCourseLabel(code: string, component: CourseComponent | null) {
+    setCourseLabel(saveCourseLabel(window.localStorage, { code, component }));
   }
 
   // Recomputed from the current tasks, so the plan always matches the screen.
@@ -456,6 +473,8 @@ export function CalendarProvider({
     clearCompletedTaskIds(window.localStorage, "imported");
     clearRememberedSource(window.localStorage);
     saveEffortMap(window.localStorage, {});
+    clearCourseLabel(window.localStorage);
+    setCourseLabel(null);
     setEfforts({});
     setRememberSource(false);
     setHasSavedImport(false);
@@ -522,6 +541,8 @@ export function CalendarProvider({
     dueSoon,
     efforts,
     setTaskEffort,
+    courseLabel,
+    updateCourseLabel,
     plan,
     insights,
     completionPercent,
