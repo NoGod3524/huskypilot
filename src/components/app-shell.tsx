@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { AppFooter } from "@/components/app-footer";
 import { useCalendar } from "@/components/calendar-provider";
 import { t } from "@/lib/i18n";
 
@@ -28,7 +29,13 @@ const NAV_ITEMS = [
  * root layout, so the language toggle, reminder toggle, and navigation stay
  * mounted while the routed content below them changes.
  */
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  version,
+  children,
+}: {
+  version: string;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
   const {
     locale,
@@ -105,7 +112,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         </aside>
 
-        <section className="min-w-0 flex-1 px-4 py-5 sm:px-7 lg:px-10 lg:py-8">
+        <section className="flex min-w-0 flex-1 flex-col px-4 py-5 sm:px-7 lg:px-10 lg:py-8">
           <header className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 lg:hidden">
               <div className="grid size-10 place-items-center rounded-xl bg-[var(--navy)] text-white">
@@ -176,7 +183,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          {children}
+          <div className="flex-1">{children}</div>
+          <AppFooter version={version} />
         </section>
       </div>
     </main>

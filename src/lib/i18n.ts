@@ -89,6 +89,8 @@ const en = {
   "reminders.banner": "{count} due in the next 24 hours",
   "reminders.notificationTitle": "HuskyPilot — deadlines",
   "reminders.notificationBody": "{count} due in the next 24 hours",
+  "footer.version": "Version {version}",
+  "footer.builtWith": "Built with Next.js, deployed on Vercel.",
 } as const;
 
 const zhCN: Record<TranslationKey, string> = {
@@ -177,6 +179,8 @@ const zhCN: Record<TranslationKey, string> = {
   "reminders.banner": "未来 24 小时内有 {count} 个任务到期",
   "reminders.notificationTitle": "HuskyPilot — 到期提醒",
   "reminders.notificationBody": "未来 24 小时内有 {count} 个任务到期",
+  "footer.version": "版本 {version}",
+  "footer.builtWith": "由 Next.js 构建，部署在 Vercel。",
 };
 
 export type TranslationKey = keyof typeof en;
