@@ -9,12 +9,13 @@ While the project is pre-1.0 the scheme is deliberately simple:
 - **Patch** (`0.1.x`, `0.2.x`, …) — a fix, a cleanup, documentation, or a small addition.
 - **Minor** (`0.2.0`, `0.3.0`, …) — a new capability, or a change to the architecture.
 
-## 0.3.1 — Version footer (unreleased)
+## [0.3.1](https://github.com/NoGod3524/huskypilot/releases/tag/v0.3.1) — Version footer and settled history
 
 ### Added
 
 - A version footer on every route, read from `package.json` so the version has a
-  single source of truth.
+  single source of truth. ([#18])
+- This changelog, plus annotated git tags marking every earlier release. ([#17])
 
 ## [0.3.0](https://github.com/NoGod3524/huskypilot/releases/tag/v0.3.0) — Real routes
 
@@ -178,3 +179,5 @@ While the project is pre-1.0 the scheme is deliberately simple:
 [#14]: https://github.com/NoGod3524/huskypilot/pull/14
 [#15]: https://github.com/NoGod3524/huskypilot/pull/15
 [#16]: https://github.com/NoGod3524/huskypilot/pull/16
+[#17]: https://github.com/NoGod3524/huskypilot/pull/17
+[#18]: https://github.com/NoGod3524/huskypilot/pull/18
