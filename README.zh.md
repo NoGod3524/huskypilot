@@ -160,8 +160,8 @@ npm run build
 
 ## 路线图
 
-- [ ] CI：每个 Pull Request 自动跑 `test` / `lint` / `build`
-- [ ] 洞察页：按课程的任务量、最忙的周、完成率
+- [x] CI：每个 Pull Request 自动跑 `test` / `lint` / `build`
+- [x] 洞察页：按课程的任务量、最忙的周、完成率
 - [ ] 可选的自动刷新（需要把订阅链接存在本地）
 - [ ] 到期提醒 / 通知
 - [ ] 导出任务为 CSV / JSON
