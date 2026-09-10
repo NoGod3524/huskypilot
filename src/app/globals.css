@@ -32,6 +32,12 @@ body {
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
 }
 
+/* When installed to a phone home screen, keep content clear of the home
+   indicator now that the viewport is allowed to extend into the safe area. */
+main {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 button,
 input {
   font: inherit;
