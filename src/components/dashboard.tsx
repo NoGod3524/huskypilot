@@ -54,6 +54,12 @@ import {
 } from "@/lib/reminders";
 import { CSV_BOM, exportFileName, tasksToCsv } from "@/lib/export";
 import {
+  clearRememberedSource,
+  isUsableSourceUrl,
+  restoreRememberedSource,
+  saveRememberedSource,
+} from "@/lib/calendar-source";
+import {
   DEFAULT_LOCALE,
   intlLocale,
   restoreLocale,
@@ -170,6 +176,8 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
   const [notificationPermission, setNotificationPermission] = useState<
     NotificationPermission | "unsupported"
   >("default");
+  // Opt-in only: when false, the feed URL is never written to storage.
+  const [rememberSource, setRememberSource] = useState(false);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -178,6 +186,85 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
   function changeLocale(nextLocale: Locale) {
     setLocale(nextLocale);
     saveLocale(window.localStorage, nextLocale);
+  }
+
+  /** Show a successful import and cache it, preserving completion state. */
+  function applyImportResult(result: CalendarImportResult) {
+    const restoredCompleted = restoreCompletedTaskIds(window.localStorage, "imported");
+    const eventIds = new Set(result.events.map((event) => event.id));
+
+    setTasks(result.events);
+    setCalendarName(result.calendarName);
+    setImportedAt(result.importedAt);
+    setIsImported(true);
+    setHasSavedImport(true);
+    setRestoredFromStorage(false);
+    saveImportedCalendar(window.localStorage, result);
+    setCompletedIds(
+      new Set([...restoredCompleted].filter((id) => eventIds.has(id))),
+    );
+  }
+
+  async function requestImport(sourceUrl: string) {
+    const response = await fetch("/api/calendar/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: sourceUrl }),
+    });
+    const result = (await response.json()) as CalendarImportResult & {
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(result.error ?? t(locale, "errors.importFailed"));
+    }
+
+    return result;
+  }
+
+  async function handleImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setNotice(null);
+    setIsLoading(true);
+
+    try {
+      const result = await requestImport(calendarUrl);
+      applyImportResult(result);
+      if (rememberSource) {
+        saveRememberedSource(window.localStorage, calendarUrl);
+      }
+      setCalendarUrl("");
+      setNotice(
+        t(
+          locale,
+          result.events.length === 1 ? "notices.importedEvent" : "notices.importedEvents",
+          { count: result.events.length },
+        ),
+      );
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : t(locale, "errors.importFailed"),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  /** Refresh from a remembered feed on open; never blocks the first paint. */
+  async function refreshRememberedSource(sourceUrl: string, activeLocale: Locale) {
+    try {
+      const result = await requestImport(sourceUrl);
+      applyImportResult(result);
+      setNotice(
+        t(activeLocale, "notices.autoRefreshed", { count: result.events.length }),
+      );
+    } catch {
+      // Offline, or the feed stopped working: keep the cached copy and say so.
+      setNotice(t(activeLocale, "notices.autoRefreshFailed"));
+    }
   }
 
   useEffect(() => {
@@ -213,9 +300,20 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
       setNotificationPermission(
         "Notification" in window ? Notification.permission : "unsupported",
       );
+
+      // Opt-in auto-refresh: only present when the user explicitly asked for it.
+      const remembered = restoreRememberedSource(window.localStorage);
+      if (remembered) {
+        setRememberSource(true);
+        void refreshRememberedSource(remembered.url, restoredLocale);
+      }
     }, 0);
 
     return () => window.clearTimeout(timer);
+    // Restore-on-mount must run exactly once. `refreshRememberedSource` is
+    // recreated on every render, so listing it here would re-run the whole
+    // restore on each render instead of once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const completionSource: CompletionSource = isImported ? "imported" : "demo";
@@ -351,54 +449,16 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     }).format(new Date(importedAt));
   }, [importedAt, locale]);
 
-  async function handleImport(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setNotice(null);
-    setIsLoading(true);
+  function toggleRememberSource() {
+    if (rememberSource) {
+      setRememberSource(false);
+      clearRememberedSource(window.localStorage);
+      return;
+    }
 
-    try {
-      const response = await fetch("/api/calendar/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: calendarUrl }),
-      });
-      const result = (await response.json()) as CalendarImportResult & {
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(result.error ?? t(locale, "errors.importFailed"));
-      }
-
-      setTasks(result.events);
-      setCalendarName(result.calendarName);
-      setImportedAt(result.importedAt);
-      setIsImported(true);
-      setHasSavedImport(true);
-      setRestoredFromStorage(false);
-      saveImportedCalendar(window.localStorage, result);
-      const restoredCompleted = restoreCompletedTaskIds(window.localStorage, "imported");
-      const eventIds = new Set(result.events.map((event) => event.id));
-      setCompletedIds(
-        new Set([...restoredCompleted].filter((id) => eventIds.has(id))),
-      );
-      setCalendarUrl("");
-      setNotice(
-        t(
-          locale,
-          result.events.length === 1 ? "notices.importedEvent" : "notices.importedEvents",
-          { count: result.events.length },
-        ),
-      );
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : t(locale, "errors.importFailed"),
-      );
-    } finally {
-      setIsLoading(false);
+    setRememberSource(true);
+    if (isUsableSourceUrl(calendarUrl)) {
+      saveRememberedSource(window.localStorage, calendarUrl);
     }
   }
 
@@ -418,6 +478,8 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
   function clearSavedData() {
     clearImportedCalendar(window.localStorage);
     clearCompletedTaskIds(window.localStorage, "imported");
+    clearRememberedSource(window.localStorage);
+    setRememberSource(false);
     setHasSavedImport(false);
     setCalendarName(null);
     setImportedAt(null);
@@ -669,6 +731,27 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
                   )}
                 </button>
               </form>
+            </div>
+
+            <div className="flex items-start gap-2.5 border-t border-[var(--line)] px-5 py-3 sm:px-7">
+              <input
+                id="remember-calendar"
+                type="checkbox"
+                checked={rememberSource}
+                onChange={toggleRememberSource}
+                className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[#2a71d8]"
+              />
+              <div className="min-w-0">
+                <label
+                  htmlFor="remember-calendar"
+                  className="text-sm font-semibold text-[#31506f]"
+                >
+                  {t(locale, "connect.rememberLabel")}
+                </label>
+                <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
+                  {t(locale, "connect.rememberHint")}
+                </p>
+              </div>
             </div>
 
             <details className="group border-t border-[var(--line)] px-5 py-3 text-sm sm:px-7">
