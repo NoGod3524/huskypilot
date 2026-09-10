@@ -160,8 +160,8 @@ This project was developed with GitHub Copilot as a pair, including its coding a
 
 ## Roadmap
 
-- [ ] CI: run `test` / `lint` / `build` on every pull request
-- [ ] Insights view: workload by course, busiest weeks, completion rate
+- [x] CI: run `test` / `lint` / `build` on every pull request
+- [x] Insights view: workload by course, busiest weeks, completion rate
 - [ ] Optional, opt-in auto-refresh (would require storing the feed URL locally)
 - [ ] Reminders / due-date notifications
 - [ ] Export tasks to CSV / JSON
