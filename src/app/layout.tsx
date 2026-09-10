@@ -4,6 +4,8 @@ import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { CalendarProvider } from "@/components/calendar-provider";
 import { ServiceWorkerRegistrar } from "@/components/service-worker-registrar";
+// Single source of truth for the version shown in the footer.
+import packageJson from "../../package.json";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -54,7 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             between routes keeps the imported tasks, completion state, language
             and reminder settings without re-mounting or flashing demo data. */}
         <CalendarProvider initialNow={new Date().toISOString()}>
-          <AppShell>{children}</AppShell>
+          <AppShell version={packageJson.version}>{children}</AppShell>
         </CalendarProvider>
         <ServiceWorkerRegistrar />
       </body>
