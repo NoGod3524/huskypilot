@@ -9,6 +9,7 @@ import {
   Check,
   ChevronRight,
   Clock3,
+  Download,
   LayoutDashboard,
   Link2,
   LoaderCircle,
@@ -51,6 +52,7 @@ import {
   shouldNotify,
   type ReminderState,
 } from "@/lib/reminders";
+import { CSV_BOM, exportFileName, tasksToCsv } from "@/lib/export";
 import {
   DEFAULT_LOCALE,
   intlLocale,
@@ -429,6 +431,21 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
     setError(null);
   }
 
+  /** Download exactly what is on screen, as a spreadsheet-friendly CSV. */
+  function exportTasks() {
+    const csv = CSV_BOM + tasksToCsv(tasks, completedIds);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = exportFileName(now);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function restoreSavedImport() {
     const restored = restoreImportedCalendar(window.localStorage);
     if (!restored.calendar) {
@@ -701,6 +718,15 @@ export function Dashboard({ initialNow }: { initialNow: string }) {
               </h2>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {tasks.length > 0 && (
+                <button
+                  type="button"
+                  onClick={exportTasks}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#cdd9e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
+                >
+                  <Download size={13} />{t(locale, "actions.exportCsv")}
+                </button>
+              )}
               {isImported && (
                 <button
                   type="button"
