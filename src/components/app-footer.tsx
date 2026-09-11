@@ -18,6 +18,8 @@ export function AppFooter({ version }: { version: string }) {
         <span className="font-semibold text-[#31506f]">{t(locale, "app.name")}</span>
         {" · "}
         {t(locale, "footer.version", { version })}
+        {" · "}
+        {t(locale, "footer.disclaimer")}
       </span>
       <span>{t(locale, "footer.builtWith")}</span>
     </footer>

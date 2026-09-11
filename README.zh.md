@@ -10,6 +10,22 @@
 
 ![HuskyPilot](./public/og.png)
 
+## 界面截图
+
+**总览** —— 添加日历，然后是滚动的本周视图。
+
+![总览页](./public/screenshots/overview.zh.png)
+
+**计划** —— 接下来做什么，以及哪些已经来不及。
+
+![计划页](./public/screenshots/plan.zh.png)
+
+**安排** —— 今天 / 明天 / 本周，可勾选完成。
+
+![安排页](./public/screenshots/tasks.zh.png)
+
+英文界面：[`overview.png`](./public/screenshots/overview.png) · [`plan.png`](./public/screenshots/plan.png) · [`tasks.png`](./public/screenshots/tasks.png)
+
 ## 为什么做这个
 
 学生的 deadline 散落在教学平台、课程大纲和邮件里。HuskyPilot 把你本来就有的日历订阅，变成一份滚动的未来 7 天任务清单——「接下来要交什么」一眼可见，不用到处翻。
@@ -220,9 +236,19 @@ HuskyPilot 最初是一个自用工具。deadline 散落在 HuskyCT、课程大�
 - [x] 可安装的 PWA（含离线应用外壳）
 - [x] 到期提醒（App 打开时生效）
 - [x] 可选自动刷新（链接存在本机，默认关闭）
+- [x] 导出任务为 CSV
 - [ ] 后台推送提醒（需要推送服务器）
-- [ ] 导出任务为 CSV / JSON
 
 ## 作者
 
 由 [Yinuo (NoGod3524)](https://github.com/NoGod3524) 构建，一名 UConn 学生。
+
+## 免责声明
+
+HuskyPilot 是独立的个人学生项目，**与康涅狄格大学、HuskyCT、Blackboard 官方没有任何隶属、背书或支持关系**。文中提到这些名字，只是为了说明这个工具读取的是什么。
+
+你粘贴的是你自己的私人日历链接，请当作密码保管。本应用没有服务端数据库、不保存你的任何信息；但如果你勾选了「记住这条链接」，它会保存在那台浏览器里。
+
+## 许可证
+
+[MIT](./LICENSE) © 2026 Yinuo
