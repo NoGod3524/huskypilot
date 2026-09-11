@@ -49,6 +49,7 @@ export function AppShell({
     formattedImportedAt,
     restoredFromStorage,
     isImported,
+    subscriptions,
   } = useCalendar();
 
   return (
@@ -85,7 +86,14 @@ export function AppShell({
 
           <div className="mt-auto rounded-2xl bg-[var(--navy)] p-4 text-white">
             <p className="text-sm font-semibold">
-              {hasSavedImport ? calendarName ?? t(locale, "sidebar.calendarConnected") : t(locale, "sidebar.demoCalendar")}
+              {hasSavedImport
+                ? calendarName ??
+                  (subscriptions.length === 1
+                    ? t(locale, "sidebar.calendarConnected")
+                    : t(locale, "sidebar.calendarCount", {
+                        count: subscriptions.length,
+                      }))
+                : t(locale, "sidebar.demoCalendar")}
             </p>
             <p className="mt-1 text-xs leading-5 text-blue-100/75">
               {hasSavedImport

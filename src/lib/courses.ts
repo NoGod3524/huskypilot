@@ -337,11 +337,13 @@ export function clearTaskCourse(book: CourseBook, taskId: string): CourseBook {
 
 /**
  * What one row should print: the user's pick, else the course named by the feed
- * itself, else the default course. Never an invented name.
+ * itself, else the course the feed was filed under, else the default course.
+ * Never an invented name.
  */
 export function labelForTask(
   book: CourseBook,
   task: CalendarTask,
+  feedCourseId: string | null = null,
 ): CourseLabel | null {
   const picked = book.assignments[task.id];
   if (picked === null) return null;
@@ -353,8 +355,9 @@ export function labelForTask(
   if (!course) {
     const fromFeed = (task.course ?? "").trim();
     if (fromFeed) return { code: fromFeed, component: null };
-    course = defaultCourse(book);
+    course = book.courses.find((entry) => entry.id === feedCourseId) ?? null;
   }
+  if (!course) course = defaultCourse(book);
   if (!course) return null;
 
   const code = normaliseCourseCode(course.code);

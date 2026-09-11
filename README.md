@@ -20,7 +20,7 @@ It is deliberately small and privacy-first: no NetID, no password, no scraping, 
 
 - **Import any ICS feed** — paste your HuskyCT / Blackboard private calendar URL, with built-in help for finding it
 - **Plan** — set how big each task is (quick / medium / long) and HuskyPilot warns you honestly when the days left no longer fit the work, and resurfaces anything already overdue
-- **Several courses in one calendar** — add each course once (code plus LEC / DIS / LAB / SEM), mark one as the default, and every task shows its course, whether it is a class meeting or an assignment, its room, and the exact due time — with a per-task picker for the rows the default gets wrong
+- **Several calendars, several courses** — HuskyCT issues one feed per course, so add as many as you have; file each under a course (code plus LEC / DIS / LAB / SEM), and every task shows its course, whether it is a class meeting or an assignment, its room, and the exact due time — with a per-task picker for the rows the default gets wrong
 - **Rolling 7-day view** — Today / Tomorrow / This week, grouped and time-sorted
 - **Due-soon reminders** — an in-app banner for anything due in the next 24 hours, plus optional browser notifications while the app is open
 - **Installable and offline** — add it to a phone's home screen as a PWA and keep reading saved tasks without a connection
@@ -28,7 +28,7 @@ It is deliberately small and privacy-first: no NetID, no password, no scraping, 
 - **Workload insights** — completion rate, tasks per course, and the next 7 days / 4 weeks at a glance
 - **English / 简体中文** — one-click language toggle, remembered across visits
 - **Local persistence** — re-importing the same calendar preserves your completion state
-- **Optional auto-refresh** — off by default; tick **Remember this calendar** and HuskyPilot re-imports the feed whenever you open it
+- **Optional auto-refresh** — off by default; tick **Remember new links** and HuskyPilot re-imports those feeds whenever you open it
 - **Privacy by design** — no NetID, no password, no account. Your ICS URL is used once and discarded unless you opt in to remembering it
 
 ## Architecture
@@ -95,7 +95,7 @@ Failures are logged without ever writing the private calendar URL to the log.
 
 | Data | Where it lives |
 |---|---|
-| Your ICS URL | Nowhere by default — used once, then discarded. Saved in this browser only if you tick **Remember this calendar** |
+| Your ICS URL | Nowhere by default — used once, then discarded. Saved in this browser only if you tick **Remember new links** |
 | Parsed events | `localStorage`, in your browser only |
 | Completed task IDs | `localStorage`, in your browser only |
 | Language choice | `localStorage`, in your browser only |
@@ -154,7 +154,8 @@ src/
    ├─ export.ts                      # CSV export
    ├─ insights.ts                    # Workload analytics (completion, per course, per week)
    ├─ reminders.ts                   # Due-soon detection and reminder settings
-   ├─ import-storage.ts              # Versioned localStorage for imported events
+   ├─ subscriptions.ts               # The list of calendars: cached events, names, opt-in URLs
+   ├─ import-storage.ts              # 1.0.x single-import storage, read once to migrate
    ├─ completion-storage.ts          # Versioned localStorage for completed task IDs
    └─ i18n.ts                        # English / 简体中文 dictionaries and lookup
 public/

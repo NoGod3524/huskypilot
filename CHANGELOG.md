@@ -9,11 +9,11 @@ The scheme is deliberately simple:
 - **Patch** (`0.1.x`, `0.2.x`, `1.0.x`) — a fix, a cleanup, documentation, or a small addition.
 - **Minor** (`0.2.0`, `0.3.0`, `1.1.0`) — a new capability, or a change to the architecture.
 
-## [1.1.0](https://github.com/NoGod3524/huskypilot/releases/tag/v1.1.0) — More than one course
+## [1.1.0](https://github.com/NoGod3524/huskypilot/releases/tag/v1.1.0) — More than one course, more than one calendar
 
-*Minor bump: 1.0.1 assumed a calendar feed belongs to one course. It does not.
-A single HuskyCT feed can carry a whole semester, and the graded items in it
-never say which course they came from.*
+*Minor bump: 1.0.1 assumed a calendar feed belongs to one course. HuskyCT issues
+one feed per course, so a semester is several links — and the graded items inside
+a feed never say which course they came from.*
 
 ### Added
 
@@ -21,15 +21,27 @@ never say which course they came from.*
   LEC / DIS / LAB / SEM — and mark one as the default. ([#22])
 - A **per-task course picker** on the Plan and Tasks rows, for the rows the
   default gets wrong. An explicit "show no course" is available too. ([#22])
+- **Several calendars at once.** Adding a second course used to replace the
+  first; feeds are now a list you can add to, up to eight. ([#22])
+- Every imported calendar is **filed under a course**, so its rows are labelled
+  without any per-row work, and can be **refreshed or removed on its own**.
 - Rows named by the feed itself still win over the default, so a feed that does
   carry a course name is never overridden by a guess.
 
 ### Changed
 
-- The 1.0.1 single course label is upgraded into a one-course list on first
-  open, so nobody loses the label they had already set.
+- The 1.0.x single saved import and its remembered URL are upgraded into one
+  entry in the calendar list, and the 1.0.1 single course label into a one-course
+  list, so nobody loses what they had already set.
 - Deleting the default course hands the default to the next course in the list,
   rather than blanking every row that relied on it.
+- Remembering a link is now a preference that applies to the links you add next,
+  rather than a property of the one calendar the app used to hold.
+
+### Fixed
+
+- Tasks are de-duplicated by their ICS UID, so overlapping feeds — or a feed that
+  is simply refreshed — no longer double their rows.
 
 ## [1.0.1](https://github.com/NoGod3524/huskypilot/releases/tag/v1.0.1) — Rows you can actually recognise
 

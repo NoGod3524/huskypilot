@@ -7,6 +7,7 @@ import {
   Link2,
   LoaderCircle,
   Plus,
+  RefreshCw,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   MAX_COURSES,
   type CourseComponent,
 } from "@/lib/courses";
+import { MAX_SUBSCRIPTIONS } from "@/lib/subscriptions";
 import { t } from "@/lib/i18n";
 
 /** The "connect your HuskyCT calendar" card: URL form, opt-in memory, help, status. */
@@ -36,6 +38,13 @@ export function ConnectSection() {
     editCourse,
     dropCourse,
     setDefaultCourse,
+    subscriptions,
+    canAddSubscription,
+    importCourseId,
+    setImportCourseId,
+    addFeedCourse,
+    dropSubscription,
+    refreshSubscription,
   } = useCalendar();
   const [draftCode, setDraftCode] = useState("");
   const [draftComponent, setDraftComponent] = useState<CourseComponent | "">("");
@@ -84,6 +93,19 @@ export function ConnectSection() {
             placeholder={t(locale, "connect.placeholder")}
             className="h-12 min-w-0 flex-1 rounded-xl border border-[var(--line-strong)] bg-[#fbfcfe] px-4 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
           />
+          <select
+            aria-label={t(locale, "connect.courseLabel")}
+            value={importCourseId}
+            onChange={(event) => setImportCourseId(event.target.value)}
+            className="h-12 rounded-xl border border-[var(--line-strong)] bg-[#fbfcfe] px-3 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
+          >
+            <option value="">{t(locale, "connect.courseNone")}</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.code.trim() || t(locale, "course.untitled")}
+              </option>
+            ))}
+          </select>
           <button
             type="submit"
             disabled={isLoading}
@@ -97,6 +119,90 @@ export function ConnectSection() {
           </button>
         </form>
       </div>
+
+      {subscriptions.length > 0 && (
+        <div className="border-t border-[var(--line)] px-5 py-3 sm:px-7">
+          <h3 className="text-sm font-semibold text-[#31506f]">
+            {t(locale, "subscriptions.title")}
+          </h3>
+          <ul className="mt-2 space-y-2">
+            {subscriptions.map((subscription) => (
+              <li
+                key={subscription.id}
+                className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[#fbfcfe] px-3 py-2"
+              >
+                <span
+                  className="min-w-0 flex-1 truncate text-sm font-semibold text-[#172b41]"
+                  title={subscription.calendarName ?? undefined}
+                >
+                  {subscription.calendarName?.trim() ||
+                    t(locale, "subscriptions.unnamed")}
+                </span>
+                <span className="shrink-0 text-xs text-[var(--muted)]">
+                  {t(
+                    locale,
+                    subscription.events.length === 1
+                      ? "subscriptions.tasksOne"
+                      : "subscriptions.tasks",
+                    { count: subscription.events.length },
+                  )}
+                </span>
+                <select
+                  aria-label={t(locale, "subscriptions.courseLabel")}
+                  value={subscription.courseId ?? ""}
+                  onChange={(event) =>
+                    addFeedCourse(subscription.id, event.target.value || null)
+                  }
+                  className="h-8 rounded-lg border border-[var(--line-strong)] bg-white px-2.5 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
+                >
+                  <option value="">{t(locale, "connect.courseNone")}</option>
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.code.trim() || t(locale, "course.untitled")}
+                    </option>
+                  ))}
+                </select>
+                {subscription.url ? (
+                  <button
+                    type="button"
+                    onClick={() => void refreshSubscription(subscription.id)}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#cdd9e6] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
+                  >
+                    <RefreshCw size={13} />
+                    {t(locale, "subscriptions.refresh")}
+                  </button>
+                ) : (
+                  <span className="shrink-0 text-[11px] text-[var(--muted)]">
+                    {t(locale, "subscriptions.notRemembered")}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => dropSubscription(subscription.id)}
+                  aria-label={t(locale, "subscriptions.removeLabel", {
+                    name:
+                      subscription.calendarName?.trim() ||
+                      t(locale, "subscriptions.unnamed"),
+                  })}
+                  className="grid size-7 shrink-0 place-items-center rounded-lg text-[var(--muted)] transition hover:bg-[#fdeae7] hover:text-[#c5402d]"
+                >
+                  <X size={15} />
+                </button>
+                {subscription.lastError && (
+                  <p className="w-full text-[11px] text-[#a34235]">
+                    {subscription.lastError}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+          {!canAddSubscription && (
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {t(locale, "subscriptions.limit", { max: MAX_SUBSCRIPTIONS })}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex items-start gap-2.5 border-t border-[var(--line)] px-5 py-3 sm:px-7">
         <input

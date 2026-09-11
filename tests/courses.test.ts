@@ -237,6 +237,32 @@ test("labelForTask prefers the pick, then the feed, then the default", () => {
   assert.equal(first.isDefault, true);
 });
 
+test("labelForTask falls back to the course its feed was filed under", () => {
+  const book = bookOf(["NRE 1000E", "LEC"], ["STAT 1000Q", "DIS"]);
+  const [first, second] = book.courses;
+
+  // The feed's own course beats both its filed course and the default.
+  assert.equal(
+    labelForTask(book, classMeeting({ course: "Environmental Science" }), second.id)
+      ?.code,
+    "Environmental Science",
+  );
+
+  // With nothing on the event, the feed's course wins over the default.
+  assert.deepEqual(labelForTask(book, assignment(), second.id), {
+    code: "STAT 1000Q",
+    component: null,
+  });
+
+  // An explicit pick still outranks the feed it came from.
+  const picked = assignTaskCourse(book, "assignment-1", first.id);
+  assert.equal(labelForTask(picked, assignment(), second.id)?.code, "NRE 1000E");
+
+  // A feed filed under a course that no longer exists falls back to the default.
+  assert.equal(labelForTask(book, assignment(), "deleted-course")?.code, "NRE 1000E");
+  assert.equal(labelForTask(book, assignment(), null)?.code, "NRE 1000E");
+});
+
 test("labelForTask shows a teaching component on class meetings only", () => {
   const book = bookOf(["NRE 1000E", "LEC"]);
 

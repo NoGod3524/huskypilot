@@ -2,7 +2,6 @@ import type { CalendarImportResult, CalendarTask } from "./calendar-types.ts";
 
 export const IMPORT_STORAGE_KEY = "huskypilot.importedCalendar.v1";
 const IMPORT_STORAGE_VERSION = 1;
-
 type StoredImportPayload = {
   version: number;
   calendarName: string | null;
@@ -18,7 +17,7 @@ function isValidDateString(value: unknown): value is string {
   return typeof value === "string" && !Number.isNaN(Date.parse(value));
 }
 
-function isCalendarTask(value: unknown): value is CalendarTask {
+export function isCalendarTask(value: unknown): value is CalendarTask {
   if (!isRecord(value)) return false;
   return (
     typeof value.id === "string" &&
