@@ -39,7 +39,7 @@ Any system that exports iCalendar (`.ics`) works. The two routes in are equivale
 
 | System | How to get it | One feed covers |
 | --- | --- | --- |
-| **Blackboard / HuskyCT** | Calendar → settings (gear) → *Get External Calendar Link* | **one course per link** |
+| **Blackboard / HuskyCT** | Calendar → gear (Settings) → ⋯ → *Share calendar* → *Copy* | **one course per link** |
 | **Canvas** | Calendar → *Calendar feed* (bottom right) | every course you are enrolled in |
 | **Moodle** | Calendar → *Export calendar* → *Get calendar URL*, or download the `.ics` | whichever courses you select |
 | **Google Classroom** | Classroom → *Calendar* → the calendar's settings → *Secret address in iCal format* | every class on that calendar |

@@ -19,12 +19,13 @@ real barrier, so 1.1.0 removes it.*
 ### Added
 
 - **Import a downloaded `.ics` file** — drop it anywhere on the page, or choose
-  it from disk, several at once. Every calendar system can hand out a file, so
-  this is the one route that works identically everywhere: no buried setting to
-  find, no link to copy. ([#22])
-- The import card now **leads with that file route** and states the three steps
-  to get the file. The link form, the opt-in memory and the course naming are
-  folded away behind one click each, so the first screen is one job, not six.
+  it from disk, several at once. Not every system offers one, but every system
+  that does can use the same gesture. ([#22])
+- The import card now **leads with the link box**, because HuskyCT hands out a
+  link and nothing else, and spells out the exact five clicks to get it:
+  *Calendar → gear (Settings) → ⋯ → Share calendar → Copy*. The file route, the
+  opt-in memory and the course naming are each one click away instead of in the
+  way, so the first screen is one job, not six.
 - Once a calendar is in, the card **folds itself down to a single line** — the
   count, and a button to add another — because from then on there is nothing to
   do there. It comes back in full on one click.
