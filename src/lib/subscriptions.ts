@@ -23,7 +23,7 @@ const SUBSCRIPTIONS_VERSION = 1;
 export const MAX_SUBSCRIPTIONS = 8;
 
 /**
- * One HuskyCT / Blackboard calendar link the user added.
+ * One calendar the user added, from a link or from a downloaded `.ics` file.
  *
  * HuskyCT issues a feed per course, so a semester is several subscriptions, not
  * one. The events are cached here — that is what the app actually renders — and
@@ -32,11 +32,17 @@ export const MAX_SUBSCRIPTIONS = 8;
  */
 export type Subscription = {
   id: string;
+  /**
+   * What to call this calendar on screen. A file import is named after the file
+   * — five Blackboard exports all announce themselves as "University of
+   * Connecticut", which is no help at all — and a link import after the feed's
+   * own `X-WR-CALNAME`.
+   */
+  name: string | null;
   /** The course this feed belongs to, when the user has said which. */
   courseId: string | null;
   /** `null` when the user chose not to remember this link. */
   url: string | null;
-  calendarName: string | null;
   importedAt: string;
   /** The last refresh failure, cleared by the next success. */
   lastError: string | null;
@@ -66,9 +72,9 @@ function parseSubscription(value: unknown): Subscription | null {
 
   return {
     id: value.id,
+    name: typeof value.name === "string" ? value.name : null,
     courseId: typeof value.courseId === "string" ? value.courseId : null,
     url: typeof value.url === "string" ? value.url : null,
-    calendarName: typeof value.calendarName === "string" ? value.calendarName : null,
     importedAt: value.importedAt,
     lastError: typeof value.lastError === "string" ? value.lastError : null,
     events: value.events,
@@ -144,9 +150,9 @@ export function migrateLegacyImport(storage: Storage): Subscription[] | null {
   const subscriptions: Subscription[] = [
     {
       id: newSubscriptionId(),
+      name: parsed.calendarName,
       courseId: null,
       url: source?.url ?? null,
-      calendarName: parsed.calendarName,
       importedAt: parsed.importedAt,
       lastError: null,
       events: parsed.events,
@@ -180,7 +186,7 @@ export function addSubscription(
     importedAt: string;
     events: CalendarTask[];
   },
-  options: { courseId?: string | null; url?: string | null } = {},
+  options: { courseId?: string | null; url?: string | null; name?: string | null } = {},
 ): Subscription[] {
   if (subscriptions.length >= MAX_SUBSCRIPTIONS) return subscriptions;
 
@@ -188,14 +194,33 @@ export function addSubscription(
     ...subscriptions,
     {
       id: newSubscriptionId(),
+      name: options.name ?? result.calendarName,
       courseId: options.courseId ?? null,
       url: options.url ?? null,
-      calendarName: result.calendarName,
       importedAt: result.importedAt,
       lastError: null,
       events: result.events,
     },
   ];
+}
+
+/**
+ * Adds several calendars at once — a batch of dropped files, say — stopping at
+ * the cap rather than silently dropping some in the middle.
+ */
+export function addSubscriptions(
+  subscriptions: Subscription[],
+  results: Array<{ calendarName: string | null; importedAt: string; events: CalendarTask[] }>,
+  options: { courseId?: string | null; name?: (index: number) => string | null } = {},
+): Subscription[] {
+  return results.reduce(
+    (accumulated, result, index) =>
+      addSubscription(accumulated, result, {
+        courseId: options.courseId ?? null,
+        name: options.name ? options.name(index) : null,
+      }),
+    subscriptions,
+  );
 }
 
 export function removeSubscription(

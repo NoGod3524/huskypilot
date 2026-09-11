@@ -68,9 +68,9 @@ function task(id: string, title = id): CalendarTask {
 function feed(id: string, events: CalendarTask[], patch: Partial<Subscription> = {}): Subscription {
   return {
     id,
+    name: `Calendar ${id}`,
     courseId: null,
     url: null,
-    calendarName: `Calendar ${id}`,
     importedAt: "2026-09-10T12:00:00.000Z",
     lastError: null,
     events,
@@ -113,7 +113,7 @@ test("restoreSubscriptions migrates the 1.0.x single import and its URL", () => 
 
   assert.equal(restored.subscriptions.length, 1);
   assert.equal(restored.subscriptions[0].events.length, 1);
-  assert.equal(restored.subscriptions[0].calendarName, "University of Connecticut");
+  assert.equal(restored.subscriptions[0].name, "University of Connecticut");
   assert.equal(restored.subscriptions[0].url, "https://huskyct.uconn.edu/learn.ics");
   assert.equal(restored.subscriptions[0].courseId, null);
   // Migrating is a one-way door: the old keys must not come back.

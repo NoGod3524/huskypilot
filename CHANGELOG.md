@@ -9,14 +9,19 @@ The scheme is deliberately simple:
 - **Patch** (`0.1.x`, `0.2.x`, `1.0.x`) — a fix, a cleanup, documentation, or a small addition.
 - **Minor** (`0.2.0`, `0.3.0`, `1.1.0`) — a new capability, or a change to the architecture.
 
-## [1.1.0](https://github.com/NoGod3524/huskypilot/releases/tag/v1.1.0) — More than one course, more than one calendar
+## [1.1.0](https://github.com/NoGod3524/huskypilot/releases/tag/v1.1.0) — Any calendar, several of them
 
 *Minor bump: 1.0.1 assumed a calendar feed belongs to one course. HuskyCT issues
 one feed per course, so a semester is several links — and the graded items inside
-a feed never say which course they came from.*
+a feed never say which course they came from. Finding those links at all was the
+real barrier, so 1.1.0 removes it.*
 
 ### Added
 
+- **Import a downloaded `.ics` file** — drop it on the import card or choose it
+  from disk, several at once. Every calendar system can hand out a file, so this
+  is the one route that works identically everywhere: no buried setting to find,
+  no link to copy. ([#22])
 - A **course list** on the import page. Add each course once — a code plus
   LEC / DIS / LAB / SEM — and mark one as the default. ([#22])
 - A **per-task course picker** on the Plan and Tasks rows, for the rows the
@@ -27,9 +32,14 @@ a feed never say which course they came from.*
   without any per-row work, and can be **refreshed or removed on its own**.
 - Rows named by the feed itself still win over the default, so a feed that does
   carry a course name is never overridden by a guess.
+- A file import is named after **the file**, not the feed: five Blackboard
+  exports all call themselves "University of Connecticut".
 
 ### Changed
 
+- The README now says where to get a feed on Blackboard, Canvas, Moodle, Google
+  Classroom and Google Calendar, and the app no longer presents HuskyCT as the
+  only way in.
 - The 1.0.x single saved import and its remembered URL are upgraded into one
   entry in the calendar list, and the 1.0.1 single course label into a one-course
   list, so nobody loses what they had already set.

@@ -9,6 +9,7 @@ import {
   Plus,
   RefreshCw,
   TriangleAlert,
+  Upload,
   X,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ export function ConnectSection() {
   const {
     locale,
     handleImport,
+    importCalendarFiles,
     calendarUrl,
     setCalendarUrl,
     isLoading,
@@ -48,6 +50,7 @@ export function ConnectSection() {
   } = useCalendar();
   const [draftCode, setDraftCode] = useState("");
   const [draftComponent, setDraftComponent] = useState<CourseComponent | "">("");
+  const [isDragging, setIsDragging] = useState(false);
   const atCourseLimit = courses.length >= MAX_COURSES;
 
   function handleAddCourse(event: FormEvent<HTMLFormElement>) {
@@ -120,6 +123,53 @@ export function ConnectSection() {
         </form>
       </div>
 
+      <div className="border-t border-[var(--line)] px-5 py-3 sm:px-7">
+        <div
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setIsDragging(false);
+            void importCalendarFiles(Array.from(event.dataTransfer.files));
+          }}
+          className={`flex flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed px-4 py-3 transition ${
+            isDragging
+              ? "border-[#2a71d8] bg-[#f2f7ff]"
+              : "border-[#d7e1ec] bg-[#fbfcfe]"
+          }`}
+        >
+          <Upload size={18} className="shrink-0 text-[#2a71d8]" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#31506f]">
+              {t(locale, isDragging ? "file.dropActive" : "file.title")}
+            </p>
+            <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
+              {t(locale, "file.hint")}
+            </p>
+          </div>
+          <label
+            htmlFor="calendar-files"
+            className="ml-auto inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-[#cdd9e6] bg-white px-3 text-sm font-semibold text-[#244e7a] transition hover:border-[#9fb7d1]"
+          >
+            {t(locale, "file.choose")}
+          </label>
+          <input
+            id="calendar-files"
+            type="file"
+            multiple
+            accept=".ics,.ical,.ifb,text/calendar"
+            className="sr-only"
+            onChange={(event) => {
+              void importCalendarFiles(Array.from(event.target.files ?? []));
+              event.target.value = "";
+            }}
+          />
+        </div>
+      </div>
+
       {subscriptions.length > 0 && (
         <div className="border-t border-[var(--line)] px-5 py-3 sm:px-7">
           <h3 className="text-sm font-semibold text-[#31506f]">
@@ -133,9 +183,9 @@ export function ConnectSection() {
               >
                 <span
                   className="min-w-0 flex-1 truncate text-sm font-semibold text-[#172b41]"
-                  title={subscription.calendarName ?? undefined}
+                  title={subscription.name ?? undefined}
                 >
-                  {subscription.calendarName?.trim() ||
+                  {subscription.name?.trim() ||
                     t(locale, "subscriptions.unnamed")}
                 </span>
                 <span className="shrink-0 text-xs text-[var(--muted)]">
@@ -181,7 +231,7 @@ export function ConnectSection() {
                   onClick={() => dropSubscription(subscription.id)}
                   aria-label={t(locale, "subscriptions.removeLabel", {
                     name:
-                      subscription.calendarName?.trim() ||
+                      subscription.name?.trim() ||
                       t(locale, "subscriptions.unnamed"),
                   })}
                   className="grid size-7 shrink-0 place-items-center rounded-lg text-[var(--muted)] transition hover:bg-[#fdeae7] hover:text-[#c5402d]"
@@ -368,14 +418,25 @@ export function ConnectSection() {
         </p>
       </details>
 
-      {(error || notice) && (
+      {error && (
         <div
-          className={`flex items-start gap-2 border-t px-5 py-3 text-sm sm:px-7 ${error ? "border-[#f3cec8] bg-[#fff6f4] text-[#9f3527]" : "border-[#cce5d7] bg-[#f3fbf7] text-[#276944]"}`}
-          role={error ? "alert" : "status"}
+          className="flex items-start gap-2 border-t border-[#f3cec8] bg-[#fff6f4] px-5 py-3 text-sm text-[#9f3527] sm:px-7"
+          role="alert"
           aria-live="polite"
         >
-          {error ? <TriangleAlert size={17} className="mt-0.5 shrink-0" /> : <Check size={17} className="mt-0.5 shrink-0" />}
-          <span>{error ?? notice}</span>
+          <TriangleAlert size={17} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {notice && (
+        <div
+          className="flex items-start gap-2 border-t border-[#cce5d7] bg-[#f3fbf7] px-5 py-3 text-sm text-[#276944] sm:px-7"
+          role="status"
+          aria-live="polite"
+        >
+          <Check size={17} className="mt-0.5 shrink-0" />
+          <span>{notice}</span>
         </div>
       )}
 

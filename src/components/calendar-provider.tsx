@@ -14,6 +14,7 @@ import {
 import type { CalendarImportResult, CalendarTask, TaskGroup } from "@/lib/calendar-types";
 import {
   addSubscription,
+  addSubscriptions,
   clearSubscriptions,
   latestImportAt,
   mergeTasks,
@@ -27,6 +28,7 @@ import {
   MAX_SUBSCRIPTIONS,
   type Subscription,
 } from "@/lib/subscriptions";
+import { CalendarFileError, readCalendarFile } from "@/lib/calendar-file";
 import {
   clearCompletedTaskIds,
   restoreCompletedTaskIds,
@@ -134,6 +136,7 @@ type CalendarContextValue = {
   notice: string | null;
   error: string | null;
   handleImport: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  importCalendarFiles: (files: File[]) => Promise<void>;
   restoreDemo: () => void;
   restoreSavedImport: () => void;
   clearSavedData: () => void;
@@ -233,11 +236,37 @@ export function CalendarProvider({
     saveSubscriptions(window.localStorage, next);
   }
 
-  async function requestImport(sourceUrl: string) {
+  /**
+   * Everything that must happen after a calendar lands: show the imported data
+   * instead of the demo, keep the tick marks that still match a real task, and
+   * say how much arrived.
+   */
+  function applyAddedSubscriptions(next: Subscription[], events: number) {
+    commitSubscriptions(next);
+    setDemoMode(false);
+    setRestoredFromStorage(false);
+    const eventIds = taskIdsOf(next);
+    const restoredCompleted = restoreCompletedTaskIds(
+      window.localStorage,
+      "imported",
+    );
+    setCompletedIds(
+      new Set([...restoredCompleted].filter((id) => eventIds.has(id))),
+    );
+    setNotice(
+      t(
+        locale,
+        events === 1 ? "notices.importedEvent" : "notices.importedEvents",
+        { count: events },
+      ),
+    );
+  }
+
+  async function requestImport(payload: { url: string } | { ics: string }) {
     const response = await fetch("/api/calendar/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: sourceUrl }),
+      body: JSON.stringify(payload),
     });
     const result = (await response.json()) as CalendarImportResult & {
       error?: string;
@@ -258,7 +287,7 @@ export function CalendarProvider({
 
     return (async () => {
       try {
-        const result = await requestImport(calendarUrl);
+        const result = await requestImport({ url: calendarUrl });
         const next = addSubscription(subscriptionsRef.current, result, {
           courseId: importCourseId || null,
           url: rememberSource ? calendarUrl : null,
@@ -269,27 +298,8 @@ export function CalendarProvider({
           return;
         }
 
-        commitSubscriptions(next);
-        setDemoMode(false);
-        setRestoredFromStorage(false);
-        const eventIds = taskIdsOf(next);
-        const restoredCompleted = restoreCompletedTaskIds(
-          window.localStorage,
-          "imported",
-        );
-        setCompletedIds(
-          new Set([...restoredCompleted].filter((id) => eventIds.has(id))),
-        );
+        applyAddedSubscriptions(next, result.events.length);
         setCalendarUrl("");
-        setNotice(
-          t(
-            locale,
-            result.events.length === 1
-              ? "notices.importedEvent"
-              : "notices.importedEvents",
-            { count: result.events.length },
-          ),
-        );
       } catch (caughtError) {
         setError(
           caughtError instanceof Error
@@ -300,6 +310,73 @@ export function CalendarProvider({
         setIsLoading(false);
       }
     })();
+  }
+
+  /**
+   * Imports downloaded `.ics` files.
+   *
+   * The file is read and parsed here in the page, so it is never uploaded and no
+   * link has to be found — which is the only import path that behaves the same
+   * way on Blackboard, Canvas, Moodle, Google Classroom and anything else that
+   * can hand out an iCalendar file.
+   */
+  async function importCalendarFiles(files: File[]) {
+    if (files.length === 0) return;
+
+    setError(null);
+    setNotice(null);
+    setIsLoading(true);
+
+    try {
+      const accepted: Array<{ name: string; result: CalendarImportResult }> = [];
+      const skipped: string[] = [];
+      for (const file of files) {
+        try {
+          const { name, icsText } = await readCalendarFile(file);
+          accepted.push({ name, result: await requestImport({ ics: icsText }) });
+        } catch (caughtError) {
+          skipped.push(
+            caughtError instanceof CalendarFileError &&
+              caughtError.problem === "too-large"
+              ? t(locale, "errors.fileTooLarge", { name: file.name })
+              : file.name,
+          );
+        }
+      }
+
+      if (accepted.length === 0) {
+        setError(
+          skipped.length > 0
+            ? t(locale, "errors.filesSkipped", { names: skipped.join(", ") })
+            : t(locale, "errors.noCalendarFiles"),
+        );
+        return;
+      }
+
+      const next = addSubscriptions(
+        subscriptionsRef.current,
+        accepted.map((entry) => entry.result),
+        {
+          courseId: importCourseId || null,
+          name: (index) => accepted[index].name,
+        },
+      );
+      const added = next.length - subscriptionsRef.current.length;
+      const events = accepted.reduce(
+        (total, entry) => total + entry.result.events.length,
+        0,
+      );
+
+      applyAddedSubscriptions(next, events);
+
+      if (added < accepted.length) {
+        setError(t(locale, "errors.tooManyCalendars", { max: MAX_SUBSCRIPTIONS }));
+      } else if (skipped.length > 0) {
+        setError(t(locale, "errors.filesSkipped", { names: skipped.join(", ") }));
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   /** Re-fetch every feed the user asked us to remember, one at a time. */
@@ -314,12 +391,12 @@ export function CalendarProvider({
     let imported = 0;
     for (const subscription of remembered) {
       try {
-        const result = await requestImport(subscription.url as string);
+        const result = await requestImport({ url: subscription.url as string });
         imported += result.events.length;
         commitSubscriptions(
           updateSubscription(subscriptionsRef.current, subscription.id, {
             events: result.events,
-            calendarName: result.calendarName,
+            name: result.calendarName,
             importedAt: result.importedAt,
             lastError: null,
           }),
@@ -528,11 +605,11 @@ export function CalendarProvider({
     if (!subscription?.url) return;
 
     try {
-      const result = await requestImport(subscription.url);
+      const result = await requestImport({ url: subscription.url });
       commitSubscriptions(
         updateSubscription(subscriptionsRef.current, subscriptionId, {
           events: result.events,
-          calendarName: result.calendarName,
+          name: result.calendarName,
           importedAt: result.importedAt,
           lastError: null,
         }),
@@ -700,7 +777,7 @@ export function CalendarProvider({
   }
 
   const calendarName =
-    subscriptions.length === 1 ? subscriptions[0].calendarName : null;
+    subscriptions.length === 1 ? subscriptions[0].name : null;
 
   const value: CalendarContextValue = {
     now,
@@ -754,6 +831,7 @@ export function CalendarProvider({
     notice,
     error,
     handleImport,
+    importCalendarFiles,
     restoreDemo,
     restoreSavedImport,
     clearSavedData,
