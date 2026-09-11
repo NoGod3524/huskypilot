@@ -3,6 +3,7 @@
 import { Clock3, Flame, TriangleAlert } from "lucide-react";
 
 import { useCalendar } from "@/components/calendar-provider";
+import { CoursePicker } from "@/components/course-picker";
 import { EFFORT_LEVELS, effortFor } from "@/lib/effort";
 import type { PlannedTask } from "@/lib/plan";
 import { t, intlLocale, type Locale } from "@/lib/i18n";
@@ -45,23 +46,20 @@ function dueMomentLabel(item: PlannedTask, locale: Locale): string {
 }
 
 function PlanRow({ item }: { item: PlannedTask }) {
-  const { locale, efforts, setTaskEffort, toggleTaskCompletion, courseLabel } =
+  const { locale, efforts, setTaskEffort, toggleTaskCompletion, courseLabelFor } =
     useCalendar();
   const level = effortFor(efforts, item.task.id);
-  const courseCode = (item.task.course ?? courseLabel?.code ?? "").trim() || null;
-  // A teaching component describes a class meeting, not an assignment.
-  const component =
-    item.task.kind === "class" ? courseLabel?.component ?? null : null;
+  const course = courseLabelFor(item.task);
 
   return (
     <li className="rounded-2xl border border-[var(--line)] bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
-            {courseCode && (
+            {course && (
               <span className="rounded-md bg-[#e8f1ff] px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-[#1e5ca8]">
-                {courseCode}
-                {component ? ` · ${component}` : ""}
+                {course.code}
+                {course.component ? ` · ${course.component}` : ""}
               </span>
             )}
             {item.task.kind && (
@@ -110,26 +108,29 @@ function PlanRow({ item }: { item: PlannedTask }) {
         </button>
       </div>
 
-      <div
-        role="group"
-        aria-label={t(locale, "plan.effortLabel")}
-        className="mt-3 flex flex-wrap items-center gap-1.5"
-      >
-        {EFFORT_LEVELS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => setTaskEffort(item.task.id, option)}
-            aria-pressed={level === option}
-            className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
-              level === option
-                ? "border-[var(--navy)] bg-[var(--navy)] text-white"
-                : "border-[#dbe3ec] bg-white text-[var(--muted)] hover:border-[#9fb7d1] hover:text-[#244e7a]"
-            }`}
-          >
-            {t(locale, `plan.effort.${option}`)}
-          </button>
-        ))}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div
+          role="group"
+          aria-label={t(locale, "plan.effortLabel")}
+          className="flex flex-wrap items-center gap-1.5"
+        >
+          {EFFORT_LEVELS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setTaskEffort(item.task.id, option)}
+              aria-pressed={level === option}
+              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                level === option
+                  ? "border-[var(--navy)] bg-[var(--navy)] text-white"
+                  : "border-[#dbe3ec] bg-white text-[var(--muted)] hover:border-[#9fb7d1] hover:text-[#244e7a]"
+              }`}
+            >
+              {t(locale, `plan.effort.${option}`)}
+            </button>
+          ))}
+        </div>
+        <CoursePicker taskId={item.task.id} className="ml-auto" />
       </div>
     </li>
   );

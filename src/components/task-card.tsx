@@ -3,6 +3,7 @@
 import { Clock3, MapPin } from "lucide-react";
 
 import { useCalendar } from "@/components/calendar-provider";
+import { CoursePicker } from "@/components/course-picker";
 import type { CalendarTask, TaskGroup } from "@/lib/calendar-types";
 import { formatTaskTime, isDueSoon } from "@/lib/calendar-view";
 import { t, type Locale } from "@/lib/i18n";
@@ -38,10 +39,11 @@ export function TaskCard({
   onToggleComplete: (taskId: string) => void;
   locale: Locale;
 }) {
-  const { courseLabel } = useCalendar();
-  // Blackboard exports no course name. Rather than invent one, fall back to the
-  // label the user set for this calendar, and show nothing when there is none.
-  const course = (task.course ?? courseLabel?.code ?? "").trim() || null;
+  const { courseLabelFor } = useCalendar();
+  // Blackboard exports no course name on graded items. Rather than invent one,
+  // fall back to the user's pick, then the feed, then the default course — and
+  // show nothing when none of them applies.
+  const course = courseLabelFor(task);
   const checkboxId = `task-complete-${task.id}`;
 
   return (
@@ -62,10 +64,11 @@ export function TaskCard({
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               {course && (
                 <span
-                  className={`max-w-full truncate rounded-md px-2 py-1 text-[10px] font-bold tracking-[0.06em] ${styleForCourse(course)}`}
-                  title={course}
+                  className={`max-w-full truncate rounded-md px-2 py-1 text-[10px] font-bold tracking-[0.06em] ${styleForCourse(course.code)}`}
+                  title={course.code}
                 >
-                  {course}
+                  {course.code}
+                  {course.component ? ` · ${course.component}` : ""}
                 </span>
               )}
               {task.kind && (
@@ -97,6 +100,7 @@ export function TaskCard({
               </span>
             )}
           </div>
+          <CoursePicker taskId={task.id} className="mt-3" />
         </div>
       </div>
     </article>

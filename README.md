@@ -20,7 +20,7 @@ It is deliberately small and privacy-first: no NetID, no password, no scraping, 
 
 - **Import any ICS feed** — paste your HuskyCT / Blackboard private calendar URL, with built-in help for finding it
 - **Plan** — set how big each task is (quick / medium / long) and HuskyPilot warns you honestly when the days left no longer fit the work, and resurfaces anything already overdue
-- **Rows that say what they are** — name a feed once (course code plus LEC / DIS / LAB / SEM) and every task shows its course, whether it is a class meeting or an assignment, its room, and the exact due time
+- **Several courses in one calendar** — add each course once (code plus LEC / DIS / LAB / SEM), mark one as the default, and every task shows its course, whether it is a class meeting or an assignment, its room, and the exact due time — with a per-task picker for the rows the default gets wrong
 - **Rolling 7-day view** — Today / Tomorrow / This week, grouped and time-sorted
 - **Due-soon reminders** — an in-app banner for anything due in the next 24 hours, plus optional browser notifications while the app is open
 - **Installable and offline** — add it to a phone's home screen as a PWA and keep reading saved tasks without a connection
@@ -36,7 +36,7 @@ It is deliberately small and privacy-first: no NetID, no password, no scraping, 
 ```mermaid
 flowchart TB
     subgraph Browser["Browser - React client"]
-        UI["Dashboard UI<br/>dashboard.tsx"]
+        UI["Route sections<br/>app-shell.tsx + *-section.tsx"]
         VIEW["calendar-view.ts<br/>group + format"]
         STORE[("localStorage<br/>calendar - completion - locale")]
     end
@@ -120,13 +120,26 @@ No NetID, no password, no account, no database, no analytics. The **Clear saved 
 src/
 ├─ app/
 │  ├─ api/calendar/import/route.ts   # POST endpoint: validate -> fetch -> parse -> JSON
-│  ├─ layout.tsx                     # Metadata, theme setup, service worker registration
+│  ├─ layout.tsx                     # Metadata, theme setup, provider, persistent shell
 │  ├─ manifest.ts                    # Web app manifest (installable PWA)
-│  ├─ page.tsx                       # Entry point
+│  ├─ page.tsx                       # /          overview
+│  ├─ plan/page.tsx                  # /plan      what to do next
+│  ├─ tasks/page.tsx                 # /tasks     rolling 7-day list
+│  ├─ calendar/page.tsx              # /calendar  week grid
+│  ├─ insights/page.tsx              # /insights  workload analytics
 │  ├─ globals.css
 │  └─ icon.tsx
 ├─ components/
-│  ├─ dashboard.tsx                  # Import form, task cards, completion, reminders, language UI
+│  ├─ calendar-provider.tsx          # Every piece of app state, in the root layout
+│  ├─ app-shell.tsx                  # Sidebar, header, footer
+│  ├─ connect-section.tsx            # Import form, course list, help text
+│  ├─ plan-section.tsx               # Overdue / at risk / upcoming plan rows
+│  ├─ tasks-section.tsx              # Task groups and cards
+│  ├─ task-card.tsx                  # One task: badges, time, room, course picker
+│  ├─ course-picker.tsx              # Per-task course override
+│  ├─ insights-section.tsx           # Workload analytics
+│  ├─ hero-section.tsx               # Overview header and status line
+│  ├─ app-footer.tsx                 # Version footer
 │  └─ service-worker-registrar.tsx   # Registers the offline service worker (production only)
 └─ lib/
    ├─ safe-fetch.ts                  # SSRF-hardened HTTPS download
@@ -134,6 +147,11 @@ src/
    ├─ calendar-view.ts               # Grouping (Today / Tomorrow / This week) and formatting
    ├─ calendar-types.ts              # Shared types
    ├─ date-utils.ts                  # Shared local-date helpers
+   ├─ effort.ts                      # Per-task effort estimates
+   ├─ plan.ts                        # Work remaining vs days left -> at-risk judgement
+   ├─ courses.ts                     # Course list, per-task overrides, 1.0.1 migration
+   ├─ calendar-source.ts             # Opt-in remembered feed URL
+   ├─ export.ts                      # CSV export
    ├─ insights.ts                    # Workload analytics (completion, per course, per week)
    ├─ reminders.ts                   # Due-soon detection and reminder settings
    ├─ import-storage.ts              # Versioned localStorage for imported events

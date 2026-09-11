@@ -20,7 +20,7 @@ UConn 学生的 deadline 散落在 HuskyCT（Blackboard）、课程大纲和邮�
 
 - **导入任意 ICS 订阅** —— 粘贴 HuskyCT / Blackboard 的私人日历链接，页面内置「去哪找链接」引导
 - **计划** —— 给每件事标个工作量大中小，剩下的天数不够时 HuskyPilot 会诚实地提醒你，并把已过期的任务重新捞出来
-- **看得懂的任务行** —— 给日历订阅起个名字（课程代码 + LEC / DIS / LAB / SEM），之后每条任务都会显示它属于哪门课、是「上课」还是「作业」、在哪个教室，以及精确的截止时间
+- **一份日历里的多门课** —— 每门课加一次（课程代码 + LEC / DIS / LAB / SEM）并指定默认，任务行就会显示它属于哪门课、是「上课」还是「作业」、在哪个教室、精确到分钟的截止时间；默认不对的那条可以单独改
 - **滚动 7 天视图** —— 今天 / 明天 / 本周，分组并按时间排序
 - **到期提醒** —— 未来 24 小时有任务到期时显示横幅；可选开启浏览器通知（App 打开时生效）
 - **可安装 + 离线** —— 作为 PWA 加到手机主屏幕，没网也能看已保存的任务
@@ -36,7 +36,7 @@ UConn 学生的 deadline 散落在 HuskyCT（Blackboard）、课程大纲和邮�
 ```mermaid
 flowchart TB
     subgraph Browser["浏览器 - React 客户端"]
-        UI["Dashboard UI<br/>dashboard.tsx"]
+        UI["各路由区块<br/>app-shell.tsx + *-section.tsx"]
         VIEW["calendar-view.ts<br/>分组 + 格式化"]
         STORE[("localStorage<br/>日历 - 勾选 - 语言")]
     end
@@ -120,13 +120,26 @@ flowchart TB
 src/
 ├─ app/
 │  ├─ api/calendar/import/route.ts   # POST 接口：校验 -> 抓取 -> 解析 -> JSON
-│  ├─ layout.tsx                     # 元数据、主题、注册 Service Worker
+│  ├─ layout.tsx                     # 元数据、主题、状态 Provider、常驻外壳
 │  ├─ manifest.ts                    # PWA 清单（可安装）
-│  ├─ page.tsx                       # 入口
+│  ├─ page.tsx                       # /          总览
+│  ├─ plan/page.tsx                  # /plan      接下来做什么
+│  ├─ tasks/page.tsx                 # /tasks     滚动 7 天清单
+│  ├─ calendar/page.tsx              # /calendar  周视图
+│  ├─ insights/page.tsx              # /insights  负担分析
 │  ├─ globals.css
 │  └─ icon.tsx
 ├─ components/
-│  ├─ dashboard.tsx                  # 导入表单、任务卡、勾选、提醒、语言切换
+│  ├─ calendar-provider.tsx          # 全部应用状态，挂在根布局
+│  ├─ app-shell.tsx                  # 侧边栏、页头、页脚
+│  ├─ connect-section.tsx            # 导入表单、课程列表、帮助说明
+│  ├─ plan-section.tsx               # 已过期 / 有风险 / 接下来 三组计划行
+│  ├─ tasks-section.tsx              # 任务分组与卡片
+│  ├─ task-card.tsx                  # 单条任务：标签、时间、教室、课程下拉
+│  ├─ course-picker.tsx              # 单条任务的课程覆盖
+│  ├─ insights-section.tsx           # 负担分析
+│  ├─ hero-section.tsx               # 总览页头部与状态行
+│  ├─ app-footer.tsx                 # 版本号页脚
 │  └─ service-worker-registrar.tsx   # 注册离线 Service Worker（仅生产环境）
 └─ lib/
    ├─ safe-fetch.ts                  # 防 SSRF 的 HTTPS 下载
@@ -134,6 +147,11 @@ src/
    ├─ calendar-view.ts               # 分组（今天 / 明天 / 本周）与时间格式化
    ├─ calendar-types.ts              # 共享类型
    ├─ date-utils.ts                  # 共享的本地日期工具
+   ├─ effort.ts                      # 每条任务的工作量估计
+   ├─ plan.ts                        # 剩余工作量 vs 剩余天数 -> 风险判断
+   ├─ courses.ts                     # 课程列表、单条覆盖、1.0.1 数据迁移
+   ├─ calendar-source.ts             # 可选记住的订阅链接
+   ├─ export.ts                      # CSV 导出
    ├─ insights.ts                    # 任务负担分析（完成率、各课程、各周）
    ├─ reminders.ts                   # 到期检测与提醒设置
    ├─ import-storage.ts              # 带版本的 localStorage（导入的事件）

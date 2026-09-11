@@ -9,6 +9,28 @@ The scheme is deliberately simple:
 - **Patch** (`0.1.x`, `0.2.x`, `1.0.x`) — a fix, a cleanup, documentation, or a small addition.
 - **Minor** (`0.2.0`, `0.3.0`, `1.1.0`) — a new capability, or a change to the architecture.
 
+## [1.1.0](https://github.com/NoGod3524/huskypilot/releases/tag/v1.1.0) — More than one course
+
+*Minor bump: 1.0.1 assumed a calendar feed belongs to one course. It does not.
+A single HuskyCT feed can carry a whole semester, and the graded items in it
+never say which course they came from.*
+
+### Added
+
+- A **course list** on the import page. Add each course once — a code plus
+  LEC / DIS / LAB / SEM — and mark one as the default. ([#22])
+- A **per-task course picker** on the Plan and Tasks rows, for the rows the
+  default gets wrong. An explicit "show no course" is available too. ([#22])
+- Rows named by the feed itself still win over the default, so a feed that does
+  carry a course name is never overridden by a guess.
+
+### Changed
+
+- The 1.0.1 single course label is upgraded into a one-course list on first
+  open, so nobody loses the label they had already set.
+- Deleting the default course hands the default to the next course in the list,
+  rather than blanking every row that relied on it.
+
 ## [1.0.1](https://github.com/NoGod3524/huskypilot/releases/tag/v1.0.1) — Rows you can actually recognise
 
 *Patch: the Plan route used to print `CALENDAR — Take-home Quiz 1` and nothing
@@ -234,3 +256,4 @@ saying what to work on next.*
 [#19]: https://github.com/NoGod3524/huskypilot/pull/19
 [#20]: https://github.com/NoGod3524/huskypilot/pull/20
 [#21]: https://github.com/NoGod3524/huskypilot/pull/21
+[#22]: https://github.com/NoGod3524/huskypilot/pull/22

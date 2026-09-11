@@ -33,12 +33,23 @@ import {
 } from "@/lib/effort";
 import { buildPlan, type Plan } from "@/lib/plan";
 import {
-  clearCourseLabel,
-  restoreCourseLabel,
-  saveCourseLabel,
+  EMPTY_COURSE_BOOK,
+  addCourse as addCourseToBook,
+  assignTaskCourse,
+  clearCourseBook,
+  clearTaskCourse,
+  courseIdForTask,
+  labelForTask,
+  removeCourse as removeCourseFromBook,
+  restoreCourseBook,
+  saveCourseBook,
+  setDefaultCourse as setDefaultInBook,
+  updateCourse as updateCourseInBook,
+  type Course,
+  type CourseBook,
   type CourseComponent,
   type CourseLabel,
-} from "@/lib/course-label";
+} from "@/lib/courses";
 import { computeInsights, type Insights } from "@/lib/insights";
 import {
   dueSoonTasks,
@@ -78,8 +89,18 @@ type CalendarContextValue = {
 
   efforts: EffortMap;
   setTaskEffort: (taskId: string, level: EffortLevel) => void;
-  courseLabel: CourseLabel | null;
-  updateCourseLabel: (code: string, component: CourseComponent | null) => void;
+  courses: Course[];
+  addCourse: (code: string, component: CourseComponent | null) => void;
+  editCourse: (
+    courseId: string,
+    patch: { code?: string; component?: CourseComponent | null },
+  ) => void;
+  dropCourse: (courseId: string) => void;
+  setDefaultCourse: (courseId: string | null) => void;
+  setTaskCourse: (taskId: string, courseId: string | null) => void;
+  followDefaultCourse: (taskId: string) => void;
+  courseIdForTask: (taskId: string) => string | null | undefined;
+  courseLabelFor: (task: CalendarTask) => CourseLabel | null;
   plan: Plan;
 
   insights: Insights;
@@ -153,8 +174,10 @@ export function CalendarProvider({
   const [completedIds, setCompletedIds] = useState<Set<string>>(() => new Set());
   // Task id -> how much work the user says it is. Defaults to "medium".
   const [efforts, setEfforts] = useState<EffortMap>({});
-  // The course this calendar belongs to. A Blackboard feed never says.
-  const [courseLabel, setCourseLabel] = useState<CourseLabel | null>(null);
+  // Every course the user has named, plus the per-task overrides. A Blackboard
+  // feed never labels a graded item with its course, and one feed can hold
+  // several courses, so this cannot be a single label.
+  const [courseBook, setCourseBook] = useState<CourseBook>(EMPTY_COURSE_BOOK);
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   // The "what did we already notify about" log is bookkeeping for an external
   // system (localStorage), not rendered state, so it lives in a ref.
@@ -290,7 +313,7 @@ export function CalendarProvider({
         "Notification" in window ? Notification.permission : "unsupported",
       );
       setEfforts(restoreEffortMap(window.localStorage));
-      setCourseLabel(restoreCourseLabel(window.localStorage));
+      setCourseBook(restoreCourseBook(window.localStorage));
 
       // Opt-in auto-refresh: only present when the user explicitly asked for it.
       const remembered = restoreRememberedSource(window.localStorage);
@@ -364,9 +387,40 @@ export function CalendarProvider({
     });
   }
 
-  /** Stores the course the whole feed belongs to; an empty code clears it. */
-  function updateCourseLabel(code: string, component: CourseComponent | null) {
-    setCourseLabel(saveCourseLabel(window.localStorage, { code, component }));
+  /**
+   * Course edits are saved on every keystroke, so the code is stored exactly as
+   * typed — trimming here would swallow the space in "NRE 1000E".
+   */
+  function commitCourseBook(next: CourseBook) {
+    setCourseBook(next);
+    saveCourseBook(window.localStorage, next);
+  }
+
+  function addCourse(code: string, component: CourseComponent | null) {
+    commitCourseBook(addCourseToBook(courseBook, code, component));
+  }
+
+  function editCourse(
+    courseId: string,
+    patch: { code?: string; component?: CourseComponent | null },
+  ) {
+    commitCourseBook(updateCourseInBook(courseBook, courseId, patch));
+  }
+
+  function dropCourse(courseId: string) {
+    commitCourseBook(removeCourseFromBook(courseBook, courseId));
+  }
+
+  function setDefaultCourse(courseId: string | null) {
+    commitCourseBook(setDefaultInBook(courseBook, courseId));
+  }
+
+  function setTaskCourse(taskId: string, courseId: string | null) {
+    commitCourseBook(assignTaskCourse(courseBook, taskId, courseId));
+  }
+
+  function followDefaultCourse(taskId: string) {
+    commitCourseBook(clearTaskCourse(courseBook, taskId));
   }
 
   // Recomputed from the current tasks, so the plan always matches the screen.
@@ -473,8 +527,8 @@ export function CalendarProvider({
     clearCompletedTaskIds(window.localStorage, "imported");
     clearRememberedSource(window.localStorage);
     saveEffortMap(window.localStorage, {});
-    clearCourseLabel(window.localStorage);
-    setCourseLabel(null);
+    clearCourseBook(window.localStorage);
+    setCourseBook(EMPTY_COURSE_BOOK);
     setEfforts({});
     setRememberSource(false);
     setHasSavedImport(false);
@@ -541,8 +595,15 @@ export function CalendarProvider({
     dueSoon,
     efforts,
     setTaskEffort,
-    courseLabel,
-    updateCourseLabel,
+    courses: courseBook.courses,
+    addCourse,
+    editCourse,
+    dropCourse,
+    setDefaultCourse,
+    setTaskCourse,
+    followDefaultCourse,
+    courseIdForTask: (taskId: string) => courseIdForTask(courseBook, taskId),
+    courseLabelFor: (task: CalendarTask) => labelForTask(courseBook, task),
     plan,
     insights,
     completionPercent,

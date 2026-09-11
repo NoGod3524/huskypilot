@@ -1,9 +1,22 @@
 "use client";
 
-import { Check, ChevronRight, Link2, LoaderCircle, TriangleAlert } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import {
+  Check,
+  ChevronRight,
+  Link2,
+  LoaderCircle,
+  Plus,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 
 import { useCalendar } from "@/components/calendar-provider";
-import { COURSE_COMPONENTS, type CourseComponent } from "@/lib/course-label";
+import {
+  COURSE_COMPONENTS,
+  MAX_COURSES,
+  type CourseComponent,
+} from "@/lib/courses";
 import { t } from "@/lib/i18n";
 
 /** The "connect your HuskyCT calendar" card: URL form, opt-in memory, help, status. */
@@ -18,9 +31,22 @@ export function ConnectSection() {
     notice,
     rememberSource,
     toggleRememberSource,
-    courseLabel,
-    updateCourseLabel,
+    courses,
+    addCourse,
+    editCourse,
+    dropCourse,
+    setDefaultCourse,
   } = useCalendar();
+  const [draftCode, setDraftCode] = useState("");
+  const [draftComponent, setDraftComponent] = useState<CourseComponent | "">("");
+  const atCourseLimit = courses.length >= MAX_COURSES;
+
+  function handleAddCourse(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    addCourse(draftCode, draftComponent || null);
+    setDraftCode("");
+    setDraftComponent("");
+  }
 
   return (
     <section
@@ -94,35 +120,36 @@ export function ConnectSection() {
       </div>
 
       <div className="border-t border-[var(--line)] px-5 py-3 sm:px-7">
-        <label htmlFor="course-code" className="text-sm font-semibold text-[#31506f]">
+        <h3 className="text-sm font-semibold text-[#31506f]">
           {t(locale, "course.title")}
-        </label>
+        </h3>
         <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
           {t(locale, "course.hint")}
         </p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+
+        <form
+          className="mt-2 flex flex-wrap items-center gap-2"
+          onSubmit={handleAddCourse}
+        >
+          <label className="sr-only" htmlFor="course-code">
+            {t(locale, "course.codeLabel")}
+          </label>
           <input
             id="course-code"
             type="text"
-            value={courseLabel?.code ?? ""}
-            onChange={(event) =>
-              updateCourseLabel(event.target.value, courseLabel?.component ?? null)
-            }
+            value={draftCode}
+            onChange={(event) => setDraftCode(event.target.value)}
             placeholder={t(locale, "course.codePlaceholder")}
-            aria-label={t(locale, "course.codeLabel")}
+            autoComplete="off"
             className="h-9 w-44 rounded-lg border border-[var(--line-strong)] bg-[#fbfcfe] px-3 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
           />
           <select
             aria-label={t(locale, "course.component")}
-            value={courseLabel?.component ?? ""}
-            disabled={!courseLabel}
+            value={draftComponent}
             onChange={(event) =>
-              updateCourseLabel(
-                courseLabel?.code ?? "",
-                (event.target.value || null) as CourseComponent | null,
-              )
+              setDraftComponent(event.target.value as CourseComponent | "")
             }
-            className="h-9 rounded-lg border border-[var(--line-strong)] bg-[#fbfcfe] px-3 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10 disabled:opacity-60"
+            className="h-9 rounded-lg border border-[var(--line-strong)] bg-[#fbfcfe] px-3 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
           >
             <option value="">{t(locale, "course.componentNone")}</option>
             {COURSE_COMPONENTS.map((component) => (
@@ -131,7 +158,91 @@ export function ConnectSection() {
               </option>
             ))}
           </select>
-        </div>
+          <button
+            type="submit"
+            disabled={!draftCode.trim() || atCourseLimit}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#cdd9e6] bg-white px-3 text-sm font-semibold text-[#244e7a] transition hover:border-[#9fb7d1] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus size={15} />
+            {t(locale, "course.add")}
+          </button>
+          {atCourseLimit && (
+            <span className="text-xs text-[var(--muted)]">
+              {t(locale, "course.limit", { max: MAX_COURSES })}
+            </span>
+          )}
+        </form>
+
+        {courses.length === 0 ? (
+          <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
+            {t(locale, "course.empty")}
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {courses.map((course) => (
+              <li
+                key={course.id}
+                className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[#fbfcfe] px-3 py-2"
+              >
+                <input
+                  type="text"
+                  value={course.code}
+                  onChange={(event) =>
+                    editCourse(course.id, { code: event.target.value })
+                  }
+                  aria-label={t(locale, "course.codeLabel")}
+                  placeholder={t(locale, "course.codePlaceholder")}
+                  autoComplete="off"
+                  className="h-8 w-40 rounded-lg border border-[var(--line-strong)] bg-white px-2.5 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
+                />
+                <select
+                  aria-label={t(locale, "course.component")}
+                  value={course.component ?? ""}
+                  onChange={(event) =>
+                    editCourse(course.id, {
+                      component: (event.target.value || null) as CourseComponent | null,
+                    })
+                  }
+                  className="h-8 rounded-lg border border-[var(--line-strong)] bg-white px-2.5 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
+                >
+                  <option value="">{t(locale, "course.componentNone")}</option>
+                  {COURSE_COMPONENTS.map((component) => (
+                    <option key={component} value={component}>
+                      {component}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  aria-pressed={course.isDefault}
+                  onClick={() =>
+                    setDefaultCourse(course.isDefault ? null : course.id)
+                  }
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                    course.isDefault
+                      ? "border-[var(--navy)] bg-[var(--navy)] text-white"
+                      : "border-[#dbe3ec] bg-white text-[var(--muted)] hover:border-[#9fb7d1] hover:text-[#244e7a]"
+                  }`}
+                >
+                  {t(
+                    locale,
+                    course.isDefault ? "course.isDefault" : "course.makeDefault",
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => dropCourse(course.id)}
+                  aria-label={t(locale, "course.removeLabel", {
+                    code: course.code.trim() || t(locale, "course.untitled"),
+                  })}
+                  className="ml-auto grid size-7 shrink-0 place-items-center rounded-lg text-[var(--muted)] transition hover:bg-[#fdeae7] hover:text-[#c5402d]"
+                >
+                  <X size={15} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <details className="group border-t border-[var(--line)] px-5 py-3 text-sm sm:px-7">
