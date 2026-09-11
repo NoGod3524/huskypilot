@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Check,
   ChevronRight,
+  ChevronUp,
   FileUp,
   Link2,
   LoaderCircle,
@@ -22,6 +23,41 @@ import {
 import { MAX_SUBSCRIPTIONS } from "@/lib/subscriptions";
 import { t } from "@/lib/i18n";
 
+/** The error and success rows, shared by both states of the card. */
+function StatusRows({
+  error,
+  notice,
+}: {
+  error: string | null;
+  notice: string | null;
+}) {
+  return (
+    <>
+      {error && (
+        <div
+          className="flex items-start gap-2 border-t border-[#f3cec8] bg-[#fff6f4] px-5 py-3 text-sm text-[#9f3527] sm:px-7"
+          role="alert"
+          aria-live="polite"
+        >
+          <TriangleAlert size={17} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {notice && (
+        <div
+          className="flex items-start gap-2 border-t border-[#cce5d7] bg-[#f3fbf7] px-5 py-3 text-sm text-[#276944] sm:px-7"
+          role="status"
+          aria-live="polite"
+        >
+          <Check size={17} className="mt-0.5 shrink-0" />
+          <span>{notice}</span>
+        </div>
+      )}
+    </>
+  );
+}
+
 /**
  * The import card.
  *
@@ -29,6 +65,9 @@ import { t } from "@/lib/i18n";
  * setting to hunt for, so it is the whole of the front of the card. The link
  * route, the opt-in memory, and the course naming are all real, but they are
  * second-order — a student who never opens them still gets everything working.
+ *
+ * Once a calendar is in, the card gets out of the way: it shrinks to one line,
+ * because from then on there is nothing to do here.
  */
 export function ConnectSection() {
   const {
@@ -58,12 +97,63 @@ export function ConnectSection() {
   const [draftCode, setDraftCode] = useState("");
   const [draftComponent, setDraftComponent] = useState<CourseComponent | "">("");
   const atCourseLimit = courses.length >= MAX_COURSES;
+  const hasCalendars = subscriptions.length > 0;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const previousCount = useRef(subscriptions.length);
+
+  // Adding a calendar is the moment this card stops being useful, so it folds
+  // itself away and lets the new deadlines take the space.
+  useEffect(() => {
+    if (subscriptions.length > previousCount.current) setIsExpanded(false);
+    previousCount.current = subscriptions.length;
+  }, [subscriptions.length]);
+
+  const showPanel = !hasCalendars || isExpanded;
 
   function handleAddCourse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     addCourse(draftCode, draftComponent || null);
     setDraftCode("");
     setDraftComponent("");
+  }
+
+  if (!showPanel) {
+    return (
+      <section
+        className="mt-7 overflow-hidden rounded-2xl border border-[#cdddf4] bg-white"
+        aria-label={t(locale, "connect.title")}
+        id="connect"
+      >
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+          <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#e7f0ff] text-[#2368c8]">
+            <FileUp size={17} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-[#172b41]">
+              {t(
+                locale,
+                hasCalendars && subscriptions.length === 1
+                  ? "connect.readyOne"
+                  : "connect.readyMany",
+                { count: subscriptions.length },
+              )}
+            </p>
+            <p className="truncate text-xs text-[var(--muted)]">
+              {t(locale, "connect.readyHint")}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsExpanded(true)}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[#cdd9e6] bg-white px-3 text-sm font-semibold text-[#244e7a] transition hover:border-[#9fb7d1]"
+          >
+            <Plus size={15} />
+            {t(locale, "connect.addMore")}
+          </button>
+        </div>
+        <StatusRows error={error} notice={notice} />
+      </section>
+    );
   }
 
   return (
@@ -76,7 +166,7 @@ export function ConnectSection() {
         <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#e7f0ff] text-[#2368c8]">
           <FileUp size={20} />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 id="connect-title" className="font-display text-lg font-semibold">
             {t(locale, "connect.title")}
           </h2>
@@ -84,6 +174,16 @@ export function ConnectSection() {
             {t(locale, "connect.description")}
           </p>
         </div>
+        {hasCalendars && (
+          <button
+            type="button"
+            onClick={() => setIsExpanded(false)}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-lg border border-[#cdd9e6] bg-white px-3 text-sm font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
+          >
+            <ChevronUp size={15} />
+            {t(locale, "connect.collapse")}
+          </button>
+        )}
       </div>
 
       <div className="px-5 pb-5 sm:px-7 sm:pb-7">
@@ -428,27 +528,7 @@ export function ConnectSection() {
         )}
       </details>
 
-      {error && (
-        <div
-          className="flex items-start gap-2 border-t border-[#f3cec8] bg-[#fff6f4] px-5 py-3 text-sm text-[#9f3527] sm:px-7"
-          role="alert"
-          aria-live="polite"
-        >
-          <TriangleAlert size={17} className="mt-0.5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {notice && (
-        <div
-          className="flex items-start gap-2 border-t border-[#cce5d7] bg-[#f3fbf7] px-5 py-3 text-sm text-[#276944] sm:px-7"
-          role="status"
-          aria-live="polite"
-        >
-          <Check size={17} className="mt-0.5 shrink-0" />
-          <span>{notice}</span>
-        </div>
-      )}
+      <StatusRows error={error} notice={notice} />
 
     </section>
   );
