@@ -361,6 +361,7 @@ export function ConnectSection() {
           <li>{t(locale, "connect.helpStep2")}</li>
           <li>{t(locale, "connect.helpStep3")}</li>
           <li>{t(locale, "connect.helpStep4")}</li>
+          <li>{t(locale, "connect.helpStep5")}</li>
         </ol>
         <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
           {t(locale, "connect.helpNote")}
