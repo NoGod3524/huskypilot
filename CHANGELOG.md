@@ -25,6 +25,9 @@ real barrier, so 1.1.0 removes it.*
 - The import card now **leads with that file route** and states the three steps
   to get the file. The link form, the opt-in memory and the course naming are
   folded away behind one click each, so the first screen is one job, not six.
+- Once a calendar is in, the card **folds itself down to a single line** — the
+  count, and a button to add another — because from then on there is nothing to
+  do there. It comes back in full on one click.
 - A **course list** on the import page. Add each course once — a code plus
   LEC / DIS / LAB / SEM — and mark one as the default. ([#22])
 - A **per-task course picker** on the Plan and Tasks rows, for the rows the
