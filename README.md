@@ -1,6 +1,6 @@
 # HuskyPilot
 
-**Your course deadlines, organized.** Paste a private HuskyCT / Blackboard ICS calendar link and get one calm, ordered view of what's due next.
+**Your course deadlines, organized.** Bring a calendar from any LMS or calendar app — paste its private ICS link, or drop a downloaded `.ics` file — and get one calm, ordered view of what's due next.
 
 **English** | [简体中文](./README.zh.md)
 
@@ -12,15 +12,17 @@
 
 ## Why
 
-UConn students track deadlines across HuskyCT (Blackboard), syllabi, and email. HuskyPilot turns the calendar feed you already have into a single rolling 7-day list, so "what's due next" is one glance instead of a scavenger hunt.
+Students track deadlines across an LMS, a syllabus, and email. HuskyPilot turns the calendar feed you already have into a single rolling 7-day list, so "what's due next" is one glance instead of a scavenger hunt.
 
 It is deliberately small and privacy-first: no NetID, no password, no scraping, no account.
 
+HuskyPilot was built at UConn against HuskyCT (Blackboard), which is the awkward case: it hands out **one feed per course**, and its assignment entries carry no course name. Anything that exports iCalendar works too — see [Where to get your calendar](#where-to-get-your-calendar).
+
 ## Features
 
-- **Import any ICS feed** — paste your HuskyCT / Blackboard private calendar URL, with built-in help for finding it
+- **Import any ICS calendar** — drop a downloaded `.ics` file anywhere on the page, or paste a private feed URL; several at once is fine
 - **Plan** — set how big each task is (quick / medium / long) and HuskyPilot warns you honestly when the days left no longer fit the work, and resurfaces anything already overdue
-- **Rows that say what they are** — name a feed once (course code plus LEC / DIS / LAB / SEM) and every task shows its course, whether it is a class meeting or an assignment, its room, and the exact due time
+- **Several calendars, several courses** — HuskyCT issues one feed per course, so add as many as you have; file each under a course (code plus LEC / DIS / LAB / SEM), and every task shows its course, whether it is a class meeting or an assignment, its room, and the exact due time — with a per-task picker for the rows the default gets wrong
 - **Rolling 7-day view** — Today / Tomorrow / This week, grouped and time-sorted
 - **Due-soon reminders** — an in-app banner for anything due in the next 24 hours, plus optional browser notifications while the app is open
 - **Installable and offline** — add it to a phone's home screen as a PWA and keep reading saved tasks without a connection
@@ -28,15 +30,29 @@ It is deliberately small and privacy-first: no NetID, no password, no scraping, 
 - **Workload insights** — completion rate, tasks per course, and the next 7 days / 4 weeks at a glance
 - **English / 简体中文** — one-click language toggle, remembered across visits
 - **Local persistence** — re-importing the same calendar preserves your completion state
-- **Optional auto-refresh** — off by default; tick **Remember this calendar** and HuskyPilot re-imports the feed whenever you open it
+- **Optional auto-refresh** — off by default; tick **Remember new links** and HuskyPilot re-imports those feeds whenever you open it
 - **Privacy by design** — no NetID, no password, no account. Your ICS URL is used once and discarded unless you opt in to remembering it
+
+## Where to get your calendar
+
+Any system that exports iCalendar (`.ics`) works. The two routes in are equivalent — a link refreshes itself, a file needs no setup at all.
+
+| System | How to get it | One feed covers |
+| --- | --- | --- |
+| **Blackboard / HuskyCT** | Calendar → settings (gear) → *Get External Calendar Link* | **one course per link** |
+| **Canvas** | Calendar → *Calendar feed* (bottom right) | every course you are enrolled in |
+| **Moodle** | Calendar → *Export calendar* → *Get calendar URL*, or download the `.ics` | whichever courses you select |
+| **Google Classroom** | Classroom → *Calendar* → the calendar's settings → *Secret address in iCal format* | every class on that calendar |
+| **Google Calendar / Outlook** | Calendar settings → the private/secret iCal address, or *Export* to download a file | the whole calendar |
+
+If your system hands out one link per course — Blackboard does — either paste them one at a time, or download each `.ics` and drop them all into the import card together. Rows are de-duplicated by their ICS UID, so overlapping feeds never double up.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
     subgraph Browser["Browser - React client"]
-        UI["Dashboard UI<br/>dashboard.tsx"]
+        UI["Route sections<br/>app-shell.tsx + *-section.tsx"]
         VIEW["calendar-view.ts<br/>group + format"]
         STORE[("localStorage<br/>calendar - completion - locale")]
     end
@@ -95,7 +111,8 @@ Failures are logged without ever writing the private calendar URL to the log.
 
 | Data | Where it lives |
 |---|---|
-| Your ICS URL | Nowhere by default — used once, then discarded. Saved in this browser only if you tick **Remember this calendar** |
+| Your ICS URL | Nowhere by default — used once, then discarded. Saved in this browser only if you tick **Remember new links** |
+| A dropped `.ics` file | Read in the page, sent to HuskyPilot's own endpoint to be parsed, and never written anywhere |
 | Parsed events | `localStorage`, in your browser only |
 | Completed task IDs | `localStorage`, in your browser only |
 | Language choice | `localStorage`, in your browser only |
@@ -120,13 +137,26 @@ No NetID, no password, no account, no database, no analytics. The **Clear saved 
 src/
 ├─ app/
 │  ├─ api/calendar/import/route.ts   # POST endpoint: validate -> fetch -> parse -> JSON
-│  ├─ layout.tsx                     # Metadata, theme setup, service worker registration
+│  ├─ layout.tsx                     # Metadata, theme setup, provider, persistent shell
 │  ├─ manifest.ts                    # Web app manifest (installable PWA)
-│  ├─ page.tsx                       # Entry point
+│  ├─ page.tsx                       # /          overview
+│  ├─ plan/page.tsx                  # /plan      what to do next
+│  ├─ tasks/page.tsx                 # /tasks     rolling 7-day list
+│  ├─ calendar/page.tsx              # /calendar  week grid
+│  ├─ insights/page.tsx              # /insights  workload analytics
 │  ├─ globals.css
 │  └─ icon.tsx
 ├─ components/
-│  ├─ dashboard.tsx                  # Import form, task cards, completion, reminders, language UI
+│  ├─ calendar-provider.tsx          # Every piece of app state, in the root layout
+│  ├─ app-shell.tsx                  # Sidebar, header, footer
+│  ├─ connect-section.tsx            # Import form, course list, help text
+│  ├─ plan-section.tsx               # Overdue / at risk / upcoming plan rows
+│  ├─ tasks-section.tsx              # Task groups and cards
+│  ├─ task-card.tsx                  # One task: badges, time, room, course picker
+│  ├─ course-picker.tsx              # Per-task course override
+│  ├─ insights-section.tsx           # Workload analytics
+│  ├─ hero-section.tsx               # Overview header and status line
+│  ├─ app-footer.tsx                 # Version footer
 │  └─ service-worker-registrar.tsx   # Registers the offline service worker (production only)
 └─ lib/
    ├─ safe-fetch.ts                  # SSRF-hardened HTTPS download
@@ -134,9 +164,16 @@ src/
    ├─ calendar-view.ts               # Grouping (Today / Tomorrow / This week) and formatting
    ├─ calendar-types.ts              # Shared types
    ├─ date-utils.ts                  # Shared local-date helpers
+   ├─ effort.ts                      # Per-task effort estimates
+   ├─ plan.ts                        # Work remaining vs days left -> at-risk judgement
+   ├─ courses.ts                     # Course list, per-task overrides, 1.0.1 migration
+   ├─ calendar-source.ts             # Opt-in remembered feed URL
+   ├─ export.ts                      # CSV export
    ├─ insights.ts                    # Workload analytics (completion, per course, per week)
    ├─ reminders.ts                   # Due-soon detection and reminder settings
-   ├─ import-storage.ts              # Versioned localStorage for imported events
+   ├─ calendar-file.ts               # Reading a dropped .ics: size, sanity, file-name labelling
+   ├─ subscriptions.ts               # The list of calendars: cached events, names, opt-in URLs
+   ├─ import-storage.ts              # 1.0.x single-import storage, read once to migrate
    ├─ completion-storage.ts          # Versioned localStorage for completed task IDs
    └─ i18n.ts                        # English / 简体中文 dictionaries and lookup
 public/

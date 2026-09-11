@@ -2,21 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BellOff,
   BellRing,
   CalendarDays,
   ChartColumn,
   Check,
+  FileUp,
   LayoutDashboard,
   ListChecks,
   Sparkles,
 } from "lucide-react";
-import type { ReactNode } from "react";
 
 import { AppFooter } from "@/components/app-footer";
 import { useCalendar } from "@/components/calendar-provider";
 import { t } from "@/lib/i18n";
+
+/** True when a drag is carrying files rather than text or a link. */
+function carriesFiles(event: DragEvent): boolean {
+  return Array.from(event.dataTransfer?.types ?? []).includes("Files");
+}
 
 const NAV_ITEMS = [
   { href: "/", key: "nav.dashboard", Icon: LayoutDashboard },
@@ -49,10 +55,80 @@ export function AppShell({
     formattedImportedAt,
     restoredFromStorage,
     isImported,
+    subscriptions,
+    importCalendarFiles,
   } = useCalendar();
+  const [isDroppingFile, setIsDroppingFile] = useState(false);
+  // Drag events fire per element as the pointer moves, so a plain boolean
+  // flickers. Counting enters and leaves keeps the overlay steady.
+  const dragDepth = useRef(0);
+  const importFiles = useRef(importCalendarFiles);
+
+  useEffect(() => {
+    importFiles.current = importCalendarFiles;
+  }, [importCalendarFiles]);
+
+  /**
+   * Accept a dropped calendar anywhere on the page.
+   *
+   * Aiming at one dashed rectangle is a small thing to ask and a real one to
+   * miss, so the whole window is a target — including the routes that have no
+   * import card on them.
+   */
+  useEffect(() => {
+    function onDragEnter(event: DragEvent) {
+      if (!carriesFiles(event)) return;
+      dragDepth.current += 1;
+      setIsDroppingFile(true);
+    }
+
+    function onDragOver(event: DragEvent) {
+      if (!carriesFiles(event)) return;
+      // Without this the browser navigates away and opens the file itself.
+      event.preventDefault();
+    }
+
+    function onDragLeave(event: DragEvent) {
+      if (!carriesFiles(event)) return;
+      dragDepth.current = Math.max(0, dragDepth.current - 1);
+      if (dragDepth.current === 0) setIsDroppingFile(false);
+    }
+
+    function onDrop(event: DragEvent) {
+      if (!carriesFiles(event)) return;
+      event.preventDefault();
+      dragDepth.current = 0;
+      setIsDroppingFile(false);
+      void importFiles.current(Array.from(event.dataTransfer?.files ?? []));
+    }
+
+    window.addEventListener("dragenter", onDragEnter);
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragleave", onDragLeave);
+    window.addEventListener("drop", onDrop);
+    return () => {
+      window.removeEventListener("dragenter", onDragEnter);
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragleave", onDragLeave);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
+      {isDroppingFile && (
+        <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center bg-[#081f3a]/45 backdrop-blur-sm">
+          <div className="rounded-3xl border-2 border-dashed border-white/70 px-12 py-9 text-center text-white">
+            <FileUp size={30} className="mx-auto" />
+            <p className="font-display mt-3 text-xl font-semibold">
+              {t(locale, "file.dropActive")}
+            </p>
+            <p className="mt-1 text-sm text-blue-100/85">
+              {t(locale, "file.dropAnywhere")}
+            </p>
+          </div>
+        </div>
+      )}
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
         <aside className="hidden w-64 shrink-0 flex-col border-r border-[var(--line)] bg-white px-5 py-7 lg:flex">
           <div className="flex items-center gap-3 px-2">
@@ -85,7 +161,14 @@ export function AppShell({
 
           <div className="mt-auto rounded-2xl bg-[var(--navy)] p-4 text-white">
             <p className="text-sm font-semibold">
-              {hasSavedImport ? calendarName ?? t(locale, "sidebar.calendarConnected") : t(locale, "sidebar.demoCalendar")}
+              {hasSavedImport
+                ? calendarName ??
+                  (subscriptions.length === 1
+                    ? t(locale, "sidebar.calendarConnected")
+                    : t(locale, "sidebar.calendarCount", {
+                        count: subscriptions.length,
+                      }))
+                : t(locale, "sidebar.demoCalendar")}
             </p>
             <p className="mt-1 text-xs leading-5 text-blue-100/75">
               {hasSavedImport

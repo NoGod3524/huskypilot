@@ -1,6 +1,6 @@
 # HuskyPilot
 
-**把你的课程 deadline 整理清楚。** 粘贴 HuskyCT / Blackboard 的私人 ICS 日历链接，得到一份清晰有序的「接下来要交什么」。
+**把你的课程 deadline 整理清楚。** 把任何 LMS 或日历应用的日历接进来——粘贴私人 ICS 链接，或者直接拖入下载好的 `.ics` 文件——得到一份清晰有序的「接下来要交什么」。
 
 [English](./README.md) | **简体中文**
 
@@ -12,15 +12,17 @@
 
 ## 为什么做这个
 
-UConn 学生的 deadline 散落在 HuskyCT（Blackboard）、课程大纲和邮件里。HuskyPilot 把你本来就有的日历订阅，变成一份滚动的未来 7 天任务清单——「接下来要交什么」一眼可见，不用到处翻。
+学生的 deadline 散落在教学平台、课程大纲和邮件里。HuskyPilot 把你本来就有的日历订阅，变成一份滚动的未来 7 天任务清单——「接下来要交什么」一眼可见，不用到处翻。
 
 它刻意做得小而注重隐私：不需要 NetID、不需要密码、不爬取网页、不需要注册账号。
 
+HuskyPilot 是在 UConn 对着 HuskyCT（Blackboard）做的，而它恰好是最难搞的那一档：**一门课一条订阅**，而且作业条目完全不写课程名。除此之外，任何能导出 iCalendar 的系统都能用——见[去哪儿取你的日历](#去哪儿取你的日历)。
+
 ## 功能
 
-- **导入任意 ICS 订阅** —— 粘贴 HuskyCT / Blackboard 的私人日历链接，页面内置「去哪找链接」引导
+- **导入任意 ICS 日历** —— 把下载好的 `.ics` 文件拖到页面任何位置，或者粘贴私人订阅链接；一次多个也行
 - **计划** —— 给每件事标个工作量大中小，剩下的天数不够时 HuskyPilot 会诚实地提醒你，并把已过期的任务重新捞出来
-- **看得懂的任务行** —— 给日历订阅起个名字（课程代码 + LEC / DIS / LAB / SEM），之后每条任务都会显示它属于哪门课、是「上课」还是「作业」、在哪个教室，以及精确的截止时间
+- **多个日历、多门课** —— HuskyCT 是每门课一条订阅，你有几条就加几条；每条订阅归到一门课（课程代码 + LEC / DIS / LAB / SEM），任务行就会显示它属于哪门课、是「上课」还是「作业」、在哪个教室、精确到分钟的截止时间；默认不对的那条可以单独改
 - **滚动 7 天视图** —— 今天 / 明天 / 本周，分组并按时间排序
 - **到期提醒** —— 未来 24 小时有任务到期时显示横幅；可选开启浏览器通知（App 打开时生效）
 - **可安装 + 离线** —— 作为 PWA 加到手机主屏幕，没网也能看已保存的任务
@@ -28,15 +30,29 @@ UConn 学生的 deadline 散落在 HuskyCT（Blackboard）、课程大纲和邮�
 - **任务负担洞察** —— 完成率、各课程任务量、未来 7 天 / 4 周一览
 - **English / 简体中文** —— 一键切换语言，选择会被记住
 - **本地持久化** —— 重新导入同一份日历，勾选状态会保留
-- **可选自动刷新** —— 默认关闭；勾选「记住这个日历」后，每次打开都会自动重新导入
+- **可选自动刷新** —— 默认关闭；勾选「记住新加的链接」后，每次打开都会自动重新导入这些订阅
 - **隐私优先设计** —— 不要 NetID、不要密码、不要账号。ICS 链接默认用完即弃，只有你主动勾选才会保存在本机浏览器
+
+## 去哪儿取你的日历
+
+任何能导出 iCalendar（`.ics`）的系统都能用。两条路效果一样——链接能自动刷新，文件则完全不用配置。
+
+| 系统 | 怎么拿 | 一条覆盖多少 |
+| --- | --- | --- |
+| **Blackboard / HuskyCT** | 日历 → 设置（齿轮）→「获取外部日历链接」 | **一门课一条链接** |
+| **Canvas** | 日历 → 右下角「Calendar feed」 | 你选的全部课程 |
+| **Moodle** | 日历 →「导出日历」→「获取日历 URL」，或直接下载 `.ics` | 你勾选的课程 |
+| **Google Classroom** | 课堂 →「日历」→ 该日历的设置 →「iCal 格式的私密地址」 | 该日历上的所有课 |
+| **Google 日历 / Outlook** | 日历设置 → 私密 iCal 地址，或「导出」下载文件 | 整个日历 |
+
+如果你的系统是一门课一条链接（Blackboard 就是），要么一条条粘，要么把每门课的 `.ics` 都下载下来，**一次性全拖进导入卡片**。任务行按 ICS 的 UID 去重，所以有重叠的订阅不会重复出现。
 
 ## 架构
 
 ```mermaid
 flowchart TB
     subgraph Browser["浏览器 - React 客户端"]
-        UI["Dashboard UI<br/>dashboard.tsx"]
+        UI["各路由区块<br/>app-shell.tsx + *-section.tsx"]
         VIEW["calendar-view.ts<br/>分组 + 格式化"]
         STORE[("localStorage<br/>日历 - 勾选 - 语言")]
     end
@@ -95,7 +111,8 @@ flowchart TB
 
 | 数据 | 存在哪 |
 |---|---|
-| 你的 ICS 链接 | 默认哪里都不存——用完即弃。只有勾选「记住这个日历」时，才只保存在此浏览器 |
+| 你的 ICS 链接 | 默认哪里都不存——用完即弃。只有勾选「记住新加的链接」时，才只保存在此浏览器 |
+| 拖入的 `.ics` 文件 | 在页面里读取，发给 HuskyPilot 自己的接口解析，不会被写到任何地方 |
 | 解析后的事件 | 只在你浏览器的 `localStorage` |
 | 已完成的任务 ID | 只在你浏览器的 `localStorage` |
 | 语言选择 | 只在你浏览器的 `localStorage` |
@@ -120,13 +137,26 @@ flowchart TB
 src/
 ├─ app/
 │  ├─ api/calendar/import/route.ts   # POST 接口：校验 -> 抓取 -> 解析 -> JSON
-│  ├─ layout.tsx                     # 元数据、主题、注册 Service Worker
+│  ├─ layout.tsx                     # 元数据、主题、状态 Provider、常驻外壳
 │  ├─ manifest.ts                    # PWA 清单（可安装）
-│  ├─ page.tsx                       # 入口
+│  ├─ page.tsx                       # /          总览
+│  ├─ plan/page.tsx                  # /plan      接下来做什么
+│  ├─ tasks/page.tsx                 # /tasks     滚动 7 天清单
+│  ├─ calendar/page.tsx              # /calendar  周视图
+│  ├─ insights/page.tsx              # /insights  负担分析
 │  ├─ globals.css
 │  └─ icon.tsx
 ├─ components/
-│  ├─ dashboard.tsx                  # 导入表单、任务卡、勾选、提醒、语言切换
+│  ├─ calendar-provider.tsx          # 全部应用状态，挂在根布局
+│  ├─ app-shell.tsx                  # 侧边栏、页头、页脚
+│  ├─ connect-section.tsx            # 导入表单、课程列表、帮助说明
+│  ├─ plan-section.tsx               # 已过期 / 有风险 / 接下来 三组计划行
+│  ├─ tasks-section.tsx              # 任务分组与卡片
+│  ├─ task-card.tsx                  # 单条任务：标签、时间、教室、课程下拉
+│  ├─ course-picker.tsx              # 单条任务的课程覆盖
+│  ├─ insights-section.tsx           # 负担分析
+│  ├─ hero-section.tsx               # 总览页头部与状态行
+│  ├─ app-footer.tsx                 # 版本号页脚
 │  └─ service-worker-registrar.tsx   # 注册离线 Service Worker（仅生产环境）
 └─ lib/
    ├─ safe-fetch.ts                  # 防 SSRF 的 HTTPS 下载
@@ -134,9 +164,16 @@ src/
    ├─ calendar-view.ts               # 分组（今天 / 明天 / 本周）与时间格式化
    ├─ calendar-types.ts              # 共享类型
    ├─ date-utils.ts                  # 共享的本地日期工具
+   ├─ effort.ts                      # 每条任务的工作量估计
+   ├─ plan.ts                        # 剩余工作量 vs 剩余天数 -> 风险判断
+   ├─ courses.ts                     # 课程列表、单条覆盖、1.0.1 数据迁移
+   ├─ calendar-source.ts             # 可选记住的订阅链接
+   ├─ export.ts                      # CSV 导出
    ├─ insights.ts                    # 任务负担分析（完成率、各课程、各周）
    ├─ reminders.ts                   # 到期检测与提醒设置
-   ├─ import-storage.ts              # 带版本的 localStorage（导入的事件）
+   ├─ calendar-file.ts               # 读取拖入的 .ics：大小、格式检查、按文件名命名
+   ├─ subscriptions.ts               # 订阅列表：缓存的事件、名字、可选保存的链接
+   ├─ import-storage.ts              # 1.0.x 的单份导入存储，只在升级时读一次
    ├─ completion-storage.ts          # 带版本的 localStorage（已完成的任务 ID）
    └─ i18n.ts                        # 中英文字典与查表函数
 public/
