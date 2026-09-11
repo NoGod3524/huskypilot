@@ -19,13 +19,14 @@ real barrier, so 1.1.0 removes it.*
 ### Added
 
 - **Import a downloaded `.ics` file** — drop it anywhere on the page, or choose
-  it from disk, several at once. Not every system offers one, but every system
-  that does can use the same gesture. ([#22])
-- The import card now **leads with the link box**, because HuskyCT hands out a
-  link and nothing else, and spells out the exact five clicks to get it:
-  *Calendar → gear (Settings) → ⋯ → Share calendar → Copy*. The file route, the
-  opt-in memory and the course naming are each one click away instead of in the
-  way, so the first screen is one job, not six.
+  it from disk, several at once. This is where the HuskyCT path ends, and it is
+  the same gesture for Canvas, Moodle, Google Classroom and anything else that
+  exports a calendar. ([#22])
+- The import card walks the path a HuskyCT student actually takes, in seven
+  numbered steps and in the words on their screen: *Calendar → gear (**setting**)
+  → ⋯ → **share calendar** → **copy** → paste into the address bar → drag the
+  downloaded file in*. Pasting the copied link straight into the app is offered
+  as the shortcut it is — two steps shorter, and one click away.
 - Once a calendar is in, the card **folds itself down to a single line** — the
   count, and a button to add another — because from then on there is nothing to
   do there. It comes back in full on one click.
