@@ -20,7 +20,7 @@ HuskyPilot was built at UConn against HuskyCT (Blackboard), which is the awkward
 
 ## Features
 
-- **Import any ICS calendar** — paste a private feed URL, or drop a downloaded `.ics` file; several at once is fine
+- **Import any ICS calendar** — drop a downloaded `.ics` file anywhere on the page, or paste a private feed URL; several at once is fine
 - **Plan** — set how big each task is (quick / medium / long) and HuskyPilot warns you honestly when the days left no longer fit the work, and resurfaces anything already overdue
 - **Several calendars, several courses** — HuskyCT issues one feed per course, so add as many as you have; file each under a course (code plus LEC / DIS / LAB / SEM), and every task shows its course, whether it is a class meeting or an assignment, its room, and the exact due time — with a per-task picker for the rows the default gets wrong
 - **Rolling 7-day view** — Today / Tomorrow / This week, grouped and time-sorted

@@ -18,10 +18,13 @@ real barrier, so 1.1.0 removes it.*
 
 ### Added
 
-- **Import a downloaded `.ics` file** — drop it on the import card or choose it
-  from disk, several at once. Every calendar system can hand out a file, so this
-  is the one route that works identically everywhere: no buried setting to find,
-  no link to copy. ([#22])
+- **Import a downloaded `.ics` file** — drop it anywhere on the page, or choose
+  it from disk, several at once. Every calendar system can hand out a file, so
+  this is the one route that works identically everywhere: no buried setting to
+  find, no link to copy. ([#22])
+- The import card now **leads with that file route** and states the three steps
+  to get the file. The link form, the opt-in memory and the course naming are
+  folded away behind one click each, so the first screen is one job, not six.
 - A **course list** on the import page. Add each course once — a code plus
   LEC / DIS / LAB / SEM — and mark one as the default. ([#22])
 - A **per-task course picker** on the Plan and Tasks rows, for the rows the
