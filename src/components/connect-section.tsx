@@ -61,10 +61,10 @@ function StatusRows({
 /**
  * The import card.
  *
- * Ordered by how hard each route is to find: dropping a downloaded file needs no
- * setting to hunt for, so it is the whole of the front of the card. The link
- * route, the opt-in memory, and the course naming are all real, but they are
- * second-order — a student who never opens them still gets everything working.
+ * HuskyCT hands out a link and nothing else — Share calendar, then Copy — so the
+ * link box is the front door, and the card spells out that exact click path
+ * next to it. A downloaded file is still accepted for the systems that export
+ * one, and a drop works anywhere on the page, but neither is in the way.
  *
  * Once a calendar is in, the card gets out of the way: it shrinks to one line,
  * because from then on there is nothing to do here.
@@ -132,7 +132,7 @@ export function ConnectSection() {
             <p className="truncate text-sm font-semibold text-[#172b41]">
               {t(
                 locale,
-                hasCalendars && subscriptions.length === 1
+                subscriptions.length === 1
                   ? "connect.readyOne"
                   : "connect.readyMany",
                 { count: subscriptions.length },
@@ -162,67 +162,112 @@ export function ConnectSection() {
       aria-labelledby="connect-title"
       id="connect"
     >
-      <div className="flex gap-4 p-5 sm:p-7">
-        <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#e7f0ff] text-[#2368c8]">
-          <FileUp size={20} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h2 id="connect-title" className="font-display text-lg font-semibold">
-            {t(locale, "connect.title")}
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
-            {t(locale, "connect.description")}
-          </p>
-        </div>
-        {hasCalendars && (
-          <button
-            type="button"
-            onClick={() => setIsExpanded(false)}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-lg border border-[#cdd9e6] bg-white px-3 text-sm font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
-          >
-            <ChevronUp size={15} />
-            {t(locale, "connect.collapse")}
-          </button>
-        )}
-      </div>
-
-      <div className="px-5 pb-5 sm:px-7 sm:pb-7">
-        <div className="rounded-2xl border-2 border-dashed border-[#b9cfea] bg-[#f7fbff] px-5 py-6 text-center">
-          <FileUp size={30} className="mx-auto text-[#2a71d8]" />
-          <p className="font-display mt-3 text-lg font-semibold text-[#172b41]">
-            {t(locale, "file.title")}
-          </p>
-          <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-[var(--muted)]">
-            {t(locale, "file.hint")}
-          </p>
-          <label
-            htmlFor="calendar-files"
-            className="mt-4 inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-6 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(35,104,200,0.24)] transition hover:bg-[#1857aa]"
-          >
-            {t(locale, "file.choose")}
-          </label>
-          <input
-            id="calendar-files"
-            type="file"
-            multiple
-            accept=".ics,.ical,.ifb,text/calendar"
-            className="sr-only"
-            onChange={(event) => {
-              void importCalendarFiles(Array.from(event.target.files ?? []));
-              event.target.value = "";
-            }}
-          />
-
-          <div className="mx-auto mt-5 max-w-lg border-t border-[#dbe7f6] pt-4 text-left">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6b7f95]">
-              {t(locale, "file.stepsTitle")}
-            </p>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-6 text-[var(--muted)]">
-              <li>{t(locale, "file.step1")}</li>
-              <li>{t(locale, "file.step2")}</li>
-              <li>{t(locale, "file.step3")}</li>
-            </ol>
+      <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_1fr] lg:items-start">
+        <div>
+          <div className="flex items-start gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#e7f0ff] text-[#2368c8]">
+              <Link2 size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 id="connect-title" className="font-display text-lg font-semibold">
+                {t(locale, "connect.title")}
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                {t(locale, "connect.description")}
+              </p>
+            </div>
+            {hasCalendars && (
+              <button
+                type="button"
+                onClick={() => setIsExpanded(false)}
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[#cdd9e6] bg-white px-3 text-sm font-semibold text-[#4e647b] transition hover:border-[#9fb7d1] hover:text-[#244e7a]"
+              >
+                <ChevronUp size={15} />
+                {t(locale, "connect.collapse")}
+              </button>
+            )}
           </div>
+
+          <form className="mt-4 flex flex-col gap-2 sm:flex-row" onSubmit={handleImport}>
+            <label className="sr-only" htmlFor="calendar-url">
+              {t(locale, "connect.inputLabel")}
+            </label>
+            <input
+              id="calendar-url"
+              name="calendarUrl"
+              type="url"
+              inputMode="url"
+              autoComplete="off"
+              required
+              value={calendarUrl}
+              onChange={(event) => setCalendarUrl(event.target.value)}
+              placeholder={t(locale, "connect.placeholder")}
+              className="h-12 min-w-0 flex-1 rounded-xl border border-[var(--line-strong)] bg-[#fbfcfe] px-4 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
+            />
+            {courses.length > 0 && (
+              <select
+                aria-label={t(locale, "connect.courseLabel")}
+                value={importCourseId}
+                onChange={(event) => setImportCourseId(event.target.value)}
+                className="h-12 rounded-xl border border-[var(--line-strong)] bg-[#fbfcfe] px-3 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
+              >
+                <option value="">{t(locale, "connect.courseNone")}</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.code.trim() || t(locale, "course.untitled")}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(35,104,200,0.24)] transition hover:bg-[#1857aa] focus:outline-none focus:ring-4 focus:ring-[#2a71d8]/20 disabled:cursor-wait disabled:opacity-70"
+            >
+              {isLoading ? (
+                <><LoaderCircle size={17} className="animate-spin" />{t(locale, "connect.importing")}</>
+              ) : (
+                <>{t(locale, "connect.importButton")}<ChevronRight size={17} /></>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-3 flex items-start gap-2.5">
+            <input
+              id="remember-calendar"
+              type="checkbox"
+              checked={rememberSource}
+              onChange={toggleRememberSource}
+              className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[#2a71d8]"
+            />
+            <div className="min-w-0">
+              <label
+                htmlFor="remember-calendar"
+                className="text-sm font-semibold text-[#31506f]"
+              >
+                {t(locale, "connect.rememberLabel")}
+              </label>
+              <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
+                {t(locale, "connect.rememberHint")}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#dbe7f6] bg-[#f7fbff] p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6b7f95]">
+            {t(locale, "connect.stepsTitle")}
+          </p>
+          <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-6 text-[#31506f]">
+            <li>{t(locale, "connect.helpStep1")}</li>
+            <li>{t(locale, "connect.helpStep2")}</li>
+            <li>{t(locale, "connect.helpStep3")}</li>
+            <li>{t(locale, "connect.helpStep4")}</li>
+            <li>{t(locale, "connect.helpStep5")}</li>
+          </ol>
+          <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
+            {t(locale, "connect.helpNote")}
+          </p>
         </div>
       </div>
 
@@ -312,88 +357,30 @@ export function ConnectSection() {
       <details className="group border-t border-[var(--line)] px-5 py-3 text-sm sm:px-7">
         <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-[#31506f] [&::-webkit-details-marker]:hidden">
           <ChevronRight size={15} className="shrink-0 text-[#2a71d8] transition group-open:rotate-90" />
-          <Link2 size={15} className="shrink-0 text-[#2a71d8]" />
-          {t(locale, "connect.linkSummary")}
+          <FileUp size={15} className="shrink-0 text-[#2a71d8]" />
+          {t(locale, "file.summary")}
         </summary>
-
-        <form
-          className="mt-3 flex flex-col gap-3 sm:flex-row"
-          onSubmit={handleImport}
-        >
-          <label className="sr-only" htmlFor="calendar-url">
-            {t(locale, "connect.inputLabel")}
-          </label>
-          <input
-            id="calendar-url"
-            name="calendarUrl"
-            type="url"
-            inputMode="url"
-            autoComplete="off"
-            required
-            value={calendarUrl}
-            onChange={(event) => setCalendarUrl(event.target.value)}
-            placeholder={t(locale, "connect.placeholder")}
-            className="h-11 min-w-0 flex-1 rounded-xl border border-[var(--line-strong)] bg-[#fbfcfe] px-4 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
-          />
-          {courses.length > 0 && (
-            <select
-              aria-label={t(locale, "connect.courseLabel")}
-              value={importCourseId}
-              onChange={(event) => setImportCourseId(event.target.value)}
-              className="h-11 rounded-xl border border-[var(--line-strong)] bg-[#fbfcfe] px-3 text-sm outline-none transition focus:border-[#2a71d8] focus:ring-4 focus:ring-[#2a71d8]/10"
-            >
-              <option value="">{t(locale, "connect.courseNone")}</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.code.trim() || t(locale, "course.untitled")}
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-5 text-sm font-semibold text-white transition hover:bg-[#1857aa] focus:outline-none focus:ring-4 focus:ring-[#2a71d8]/20 disabled:cursor-wait disabled:opacity-70"
-          >
-            {isLoading ? (
-              <><LoaderCircle size={17} className="animate-spin" />{t(locale, "connect.importing")}</>
-            ) : (
-              <>{t(locale, "connect.importButton")}<ChevronRight size={17} /></>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-3 flex items-start gap-2.5">
-          <input
-            id="remember-calendar"
-            type="checkbox"
-            checked={rememberSource}
-            onChange={toggleRememberSource}
-            className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[#2a71d8]"
-          />
-          <div className="min-w-0">
-            <label
-              htmlFor="remember-calendar"
-              className="text-sm font-semibold text-[#31506f]"
-            >
-              {t(locale, "connect.rememberLabel")}
-            </label>
-            <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
-              {t(locale, "connect.rememberHint")}
-            </p>
-          </div>
-        </div>
-
-        <ol className="mt-4 list-decimal space-y-1.5 pl-5 leading-6 text-[var(--muted)]">
-          <li>{t(locale, "connect.helpStep1")}</li>
-          <li>{t(locale, "connect.helpStep2")}</li>
-          <li>{t(locale, "connect.helpStep3")}</li>
-          <li>{t(locale, "connect.helpStep4")}</li>
-          <li>{t(locale, "connect.helpStep5")}</li>
-        </ol>
-        <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
-          {t(locale, "connect.helpNote")}
+        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+          {t(locale, "file.hint")}
         </p>
+        <label
+          htmlFor="calendar-files"
+          className="mt-3 inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#cdd9e6] bg-white px-4 text-sm font-semibold text-[#244e7a] transition hover:border-[#9fb7d1]"
+        >
+          <FileUp size={15} />
+          {t(locale, "file.choose")}
+        </label>
+        <input
+          id="calendar-files"
+          type="file"
+          multiple
+          accept=".ics,.ical,.ifb,text/calendar"
+          className="sr-only"
+          onChange={(event) => {
+            void importCalendarFiles(Array.from(event.target.files ?? []));
+            event.target.value = "";
+          }}
+        />
       </details>
 
       <details className="group border-t border-[var(--line)] px-5 py-3 text-sm sm:px-7">
@@ -529,7 +516,6 @@ export function ConnectSection() {
       </details>
 
       <StatusRows error={error} notice={notice} />
-
     </section>
   );
 }

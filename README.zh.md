@@ -39,7 +39,7 @@ HuskyPilot 是在 UConn 对着 HuskyCT（Blackboard）做的，而它恰好是�
 
 | 系统 | 怎么拿 | 一条覆盖多少 |
 | --- | --- | --- |
-| **Blackboard / HuskyCT** | 日历 → 设置（齿轮）→「获取外部日历链接」 | **一门课一条链接** |
+| **Blackboard / HuskyCT** | Calendar → 齿轮（Settings）→ ⋯ → *Share calendar* → *Copy* | **一门课一条链接** |
 | **Canvas** | 日历 → 右下角「Calendar feed」 | 你选的全部课程 |
 | **Moodle** | 日历 →「导出日历」→「获取日历 URL」，或直接下载 `.ics` | 你勾选的课程 |
 | **Google Classroom** | 课堂 →「日历」→ 该日历的设置 →「iCal 格式的私密地址」 | 该日历上的所有课 |
