@@ -5,7 +5,7 @@ import { Clock3, Flame, TriangleAlert } from "lucide-react";
 import { useCalendar } from "@/components/calendar-provider";
 import { EFFORT_LEVELS, effortFor } from "@/lib/effort";
 import type { PlannedTask } from "@/lib/plan";
-import { t, type Locale } from "@/lib/i18n";
+import { t, intlLocale, type Locale } from "@/lib/i18n";
 
 const GROUP_TONES = {
   danger: "bg-[#e6533c]",
@@ -24,29 +24,81 @@ function whenLabel(item: PlannedTask, locale: Locale): string {
   return t(locale, "plan.dueIn", { days: item.daysLeft });
 }
 
+/** The exact moment something is due, so the row is not just "in 4 days". */
+function dueMomentLabel(item: PlannedTask, locale: Locale): string {
+  const due = new Date(item.dueAt);
+  if (item.task.allDay) {
+    return new Intl.DateTimeFormat(intlLocale(locale), {
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+    }).format(due);
+  }
+
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    month: "short",
+    day: "numeric",
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(due);
+}
+
 function PlanRow({ item }: { item: PlannedTask }) {
-  const { locale, efforts, setTaskEffort, toggleTaskCompletion } = useCalendar();
+  const { locale, efforts, setTaskEffort, toggleTaskCompletion, courseLabel } =
+    useCalendar();
   const level = effortFor(efforts, item.task.id);
+  const courseCode = (item.task.course ?? courseLabel?.code ?? "").trim() || null;
+  // A teaching component describes a class meeting, not an assignment.
+  const component =
+    item.task.kind === "class" ? courseLabel?.component ?? null : null;
 
   return (
     <li className="rounded-2xl border border-[var(--line)] bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="break-words text-sm font-semibold text-[#172b41]">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {courseCode && (
+              <span className="rounded-md bg-[#e8f1ff] px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-[#1e5ca8]">
+                {courseCode}
+                {component ? ` · ${component}` : ""}
+              </span>
+            )}
+            {item.task.kind && (
+              <span className="rounded-md bg-[#f0f3f7] px-2 py-0.5 text-[10px] font-bold tracking-[0.04em] text-[#536476]">
+                {t(
+                  locale,
+                  item.task.kind === "class"
+                    ? "kind.class"
+                    : "kind.assignment",
+                )}
+              </span>
+            )}
+          </div>
+          <p className="mt-1.5 break-words text-sm font-semibold text-[#172b41]">
             {item.task.title}
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-[var(--muted)]">
-            <span className="rounded-md bg-[#f0f3f7] px-1.5 py-0.5 font-semibold text-[#536476]">
-              {item.task.course ?? "CALENDAR"}
-            </span>
-            <span>{whenLabel(item, locale)}</span>
+            {item.task.location && (
+              <>
+                <span>{item.task.location}</span>
+                <span aria-hidden="true">·</span>
+              </>
+            )}
+            <span>{dueMomentLabel(item, locale)}</span>
             <span aria-hidden="true">·</span>
-            <span>
-              {t(locale, "plan.sessions", {
-                needed: item.sessionsNeeded,
-                available: item.sessionsAvailable,
-              })}
-            </span>
+            <span>{whenLabel(item, locale)}</span>
+            {item.atRisk && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>
+                  {t(locale, "plan.sessions", {
+                    needed: item.sessionsNeeded,
+                    available: item.sessionsAvailable,
+                  })}
+                </span>
+              </>
+            )}
           </p>
         </div>
         <button

@@ -6,12 +6,23 @@ import ical, {
   type VTodo,
 } from "node-ical";
 
-import type { CalendarImportResult, CalendarTask } from "./calendar-types.ts";
+import type { CalendarImportResult, CalendarTask, TaskKind } from "./calendar-types.ts";
 
 const MAX_EVENTS = 500;
 const FUTURE_WINDOW_MS = 366 * 24 * 60 * 60 * 1000;
 
 type CalendarDate = Date & { dateOnly?: true; tz?: string };
+
+/**
+ * Blackboard encodes where an entry came from in its UID: class meetings come
+ * from the calendar, graded items from the gradebook. Nothing else in the feed
+ * distinguishes them, and it is the only way to tell a class from an assignment.
+ */
+export function blackboardKind(uid: string): TaskKind | null {
+  if (uid.includes(".calendar.CalendarEntry-")) return "class";
+  if (uid.includes(".gradebook2.GradableItem-")) return "assignment";
+  return null;
+}
 
 function textValue(value: ParameterValue | undefined) {
   if (!value) return "";
@@ -71,6 +82,7 @@ function taskFromEvent(
     end: end?.toISOString() ?? null,
     allDay,
     location: cleanText(textValue(event.location)) || null,
+    kind: blackboardKind(event.uid),
   };
 }
 
@@ -103,6 +115,7 @@ function taskFromTodo(todo: VTodo) {
     end: null,
     allDay: start.dateOnly === true || todo.datetype === "date",
     location: cleanText(textValue(todo.location)) || null,
+    kind: blackboardKind(todo.uid),
   } satisfies CalendarTask;
 }
 

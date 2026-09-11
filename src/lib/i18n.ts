@@ -112,6 +112,14 @@ const en = {
   "plan.dueIn": "due in {days}d",
   "plan.overdueBy": "overdue by {days}d",
   "plan.markDone": "Mark done",
+  "kind.class": "Class",
+  "kind.assignment": "Assignment",
+  "course.title": "This calendar belongs to",
+  "course.hint": "A Blackboard calendar feed carries no course name at all, so every event would be unlabelled. Type it once and it is applied to this whole calendar. Kept in this browser only.",
+  "course.codeLabel": "Course code",
+  "course.codePlaceholder": "e.g. NRE 1000E",
+  "course.component": "Component",
+  "course.componentNone": "Not set",
 } as const;
 
 const zhCN: Record<TranslationKey, string> = {
@@ -223,6 +231,14 @@ const zhCN: Record<TranslationKey, string> = {
   "plan.dueIn": "{days} 天后到期",
   "plan.overdueBy": "已过期 {days} 天",
   "plan.markDone": "标记完成",
+  "kind.class": "上课",
+  "kind.assignment": "作业",
+  "course.title": "这个日历属于",
+  "course.hint": "Blackboard 的日历订阅里完全没有课程名，所以所有事件都会没有归属。填一次即可套用到整个日历。只保存在此浏览器。",
+  "course.codeLabel": "课程号",
+  "course.codePlaceholder": "例如 NRE 1000E",
+  "course.component": "类型",
+  "course.componentNone": "未设置",
 };
 
 export type TranslationKey = keyof typeof en;
