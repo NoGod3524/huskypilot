@@ -10,6 +10,22 @@
 
 ![HuskyPilot](./public/og.png)
 
+## Screenshots
+
+**Overview** — add your calendar, then the rolling week.
+
+![Overview route](./public/screenshots/overview.png)
+
+**Plan** — what to do next, and what no longer fits in the days left.
+
+![Plan route](./public/screenshots/plan.png)
+
+**Tasks** — Today / Tomorrow / This week, with per-course filters and completion.
+
+![Tasks route](./public/screenshots/tasks.png)
+
+The same routes in Chinese: [`overview.zh.png`](./public/screenshots/overview.zh.png) · [`plan.zh.png`](./public/screenshots/plan.zh.png) · [`tasks.zh.png`](./public/screenshots/tasks.zh.png)
+
 ## Why
 
 Students track deadlines across an LMS, a syllabus, and email. HuskyPilot turns the calendar feed you already have into a single rolling 7-day list, so "what's due next" is one glance instead of a scavenger hunt.
@@ -220,9 +236,19 @@ HuskyPilot started as a personal tool. Deadlines were spread across HuskyCT, syl
 - [x] Installable PWA with an offline app shell
 - [x] Due-soon reminders (while the app is open)
 - [x] Optional, opt-in auto-refresh (stores the feed URL locally, off by default)
+- [x] Export tasks to CSV
 - [ ] Background push reminders (would require a push server)
-- [ ] Export tasks to CSV / JSON
 
 ## Author
 
 Built by [Yinuo (NoGod3524)](https://github.com/NoGod3524), a UConn student.
+
+## Disclaimer
+
+HuskyPilot is an independent student project. It is **not affiliated with, endorsed by, or supported by** the University of Connecticut, HuskyCT, or Blackboard Inc. "HuskyCT", "Blackboard" and "UConn" are named only to describe what the app reads.
+
+You paste your own private calendar link, and you are responsible for keeping it private — it works like a password. The app has no server-side database and stores nothing about you, but a link you tick **Remember** is saved in that browser.
+
+## License
+
+[MIT](./LICENSE) © 2026 Yinuo

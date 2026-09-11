@@ -3,11 +3,19 @@ import { z } from "zod";
 import { parseCalendar } from "@/lib/parse-calendar";
 import { fetchCalendarText, SafeFetchError } from "@/lib/safe-fetch";
 import { MAX_CALENDAR_FILE_BYTES } from "@/lib/calendar-file";
+import { clientKey, createRateLimiter } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 /** Room for a file-sized body once JSON has escaped it. */
 const MAX_BODY_LENGTH = MAX_CALENDAR_FILE_BYTES + 512 * 1024;
+
+/**
+ * One import is a network fetch plus a recurrence expansion, so it is the one
+ * endpoint worth rationing. Ten a minute is far more than a person adding their
+ * courses needs and far less than a script would like.
+ */
+const limiter = createRateLimiter({ windowMs: 60_000, max: 10 });
 
 const requestSchema = z.union([
   z.object({ url: z.string().trim().min(1).max(2_048).url() }),
@@ -15,15 +23,24 @@ const requestSchema = z.union([
   z.object({ ics: z.string().min(1).max(MAX_CALENDAR_FILE_BYTES) }),
 ]);
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return Response.json(body, {
     status,
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "no-store", ...headers },
   });
 }
 
 export async function POST(request: Request) {
   try {
+    const limit = limiter(clientKey(request));
+    if (!limit.allowed) {
+      return json(
+        { error: "Too many imports in a row. Wait a moment and try again." },
+        429,
+        { "Retry-After": String(limit.retryAfterSeconds) },
+      );
+    }
+
     const rawBody = await request.text();
     if (rawBody.length > MAX_BODY_LENGTH) {
       return json({ error: "The request was too large." }, 413);
